@@ -247,6 +247,11 @@ static void option_instat_callback(struct urb *urb);
 #define UBLOX_PRODUCT_R410M			0x90b2
 /* These Yuga products use Qualcomm's vendor ID */
 #define YUGA_PRODUCT_CLM920_NC5			0x9625
+/* These MeigLink products use Qualcomm's vendor ID */
+#define MEIGLINK_PRODUCT_SLM750			0xf601
+
+#define MEIGLINK_VENDOR_ID			0x2dee
+#define MEIGLINK_PRODUCT_SLM828			0x4d49
 
 #define QUECTEL_VENDOR_ID			0x2c7c
 /* These Quectel products use Quectel's vendor ID */
@@ -1156,6 +1161,11 @@ static const struct usb_device_id option_ids[] = {
 	{ USB_DEVICE(QUALCOMM_VENDOR_ID, 0x0023)}, /* ONYX 3G device */
 	{ USB_DEVICE(QUALCOMM_VENDOR_ID, 0x9000), /* SIMCom SIM5218 */
 	  .driver_info = NCTRL(0) | NCTRL(1) | NCTRL(2) | NCTRL(3) | RSVD(4) },
+	/* MeiG */
+	{ USB_DEVICE_AND_INTERFACE_INFO(MEIGLINK_VENDOR_ID, MEIGLINK_PRODUCT_SLM828, USB_CLASS_VENDOR_SPEC, 0x10, 0x01) },
+	{ USB_DEVICE_AND_INTERFACE_INFO(MEIGLINK_VENDOR_ID, MEIGLINK_PRODUCT_SLM828, USB_CLASS_VENDOR_SPEC, 0x10, 0x02) },
+	{ USB_DEVICE_AND_INTERFACE_INFO(MEIGLINK_VENDOR_ID, MEIGLINK_PRODUCT_SLM828, USB_CLASS_VENDOR_SPEC, 0x10, 0x03) },
+	{ USB_DEVICE_AND_INTERFACE_INFO(MEIGLINK_VENDOR_ID, MEIGLINK_PRODUCT_SLM828, USB_CLASS_VENDOR_SPEC, 0x10, 0x04) },
 	/* Quectel products using Qualcomm vendor ID */
 	{ USB_DEVICE(QUALCOMM_VENDOR_ID, QUECTEL_PRODUCT_UC15)},
 	{ USB_DEVICE(QUALCOMM_VENDOR_ID, QUECTEL_PRODUCT_UC20),
@@ -1197,6 +1207,11 @@ static const struct usb_device_id option_ids[] = {
 	  .driver_info = ZLP },
 	{ USB_DEVICE(QUECTEL_VENDOR_ID, QUECTEL_PRODUCT_BG96),
 	  .driver_info = RSVD(4) },
+	/* Meiglink products using Qualcomm vendor ID */
+	// Works OK. In case of some issues check macros that are used by Quectel Products
+	{ USB_DEVICE_AND_INTERFACE_INFO(QUALCOMM_VENDOR_ID, MEIGLINK_PRODUCT_SLM750, 0xff, 0xff, 0xff),
+	  .driver_info = NUMEP2 },
+	{ USB_DEVICE_AND_INTERFACE_INFO(QUALCOMM_VENDOR_ID, MEIGLINK_PRODUCT_SLM750, 0xff, 0, 0) },
 	{ USB_DEVICE_AND_INTERFACE_INFO(QUECTEL_VENDOR_ID, QUECTEL_PRODUCT_EP06, 0xff, 0xff, 0xff),
 	  .driver_info = RSVD(1) | RSVD(2) | RSVD(3) | RSVD(4) | NUMEP2 },
 	{ USB_DEVICE_AND_INTERFACE_INFO(QUECTEL_VENDOR_ID, QUECTEL_PRODUCT_EP06, 0xff, 0, 0) },
@@ -2310,9 +2325,13 @@ static const struct usb_device_id option_ids[] = {
 	{ USB_DEVICE_INTERFACE_CLASS(0x2cb7, 0x0a06, 0xff) },			/* Fibocom FM650-CN (RNDIS mode) */
 	{ USB_DEVICE_INTERFACE_CLASS(0x2cb7, 0x0a07, 0xff) },			/* Fibocom FM650-CN (MBIM mode) */
 	{ USB_DEVICE_INTERFACE_CLASS(0x2df3, 0x9d03, 0xff) },			/* LongSung M5710 */
+	{ USB_DEVICE_INTERFACE_CLASS(0x305a, 0x1402, 0xff) },			/* GosunCn GM800 (Download mode) */
+	{ USB_DEVICE_INTERFACE_CLASS(0x305a, 0x1403, 0xff) },			/* GosunCn GM800 (rmnet, old) */
 	{ USB_DEVICE_INTERFACE_CLASS(0x305a, 0x1404, 0xff) },			/* GosunCn GM500 RNDIS */
 	{ USB_DEVICE_INTERFACE_CLASS(0x305a, 0x1405, 0xff) },			/* GosunCn GM500 MBIM */
 	{ USB_DEVICE_INTERFACE_CLASS(0x305a, 0x1406, 0xff) },			/* GosunCn GM500 ECM/NCM */
+	{ USB_DEVICE_INTERFACE_CLASS(0x305a, 0x1421, 0xff) },			/* GosunCn GM800 (rmnet) */
+	{ USB_DEVICE_INTERFACE_CLASS(0x305a, 0x1422, 0xff) },			/* GosunCn GM800 (EAP) */
 	{ USB_DEVICE(0x33f8, 0x0104),						/* Rolling RW101-GL (laptop RMNET) */
 	  .driver_info = RSVD(4) | RSVD(5) },
 	{ USB_DEVICE_INTERFACE_CLASS(0x33f8, 0x01a2, 0xff) },			/* Rolling RW101-GL (laptop MBIM) */
