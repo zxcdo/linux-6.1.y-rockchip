@@ -1,1 +1,1 @@
-obj-$(CONFIG_AIC8800_SDIO) += sdio/
+obj-$(CONFIG_AIC8800_SUPPORT) += sdio/

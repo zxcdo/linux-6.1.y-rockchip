@@ -5,9 +5,9 @@ config AIC8800_SDIO_WLAN
 	  Support AICSemi AIC8800 SDIO wireless.
 
 config AIC8800_SDIO_FW_PATH
-	depends on AIC8800_SDIO_WLAN
 	string "Firmware & config file path"
 	default "/lib/firmware/aic8800_sdio"
+	depends on AIC8800_SDIO_WLAN
 	help
 	  Path to the firmware & config file.
 
