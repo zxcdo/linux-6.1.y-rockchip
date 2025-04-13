@@ -1,0 +1,18 @@
+config AIC8800_SDIO_WLAN
+	bool "AIC8800 SDIO WLAN Support"
+	depends on AIC8800_SUPPORT
+	help
+	  Support AICSemi AIC8800 SDIO wireless.
+
+config AIC8800_SDIO_FW_PATH
+	depends on AIC8800_SDIO_WLAN
+	string "Firmware & config file path"
+	default "/lib/firmware/aic8800_sdio"
+	help
+	  Path to the firmware & config file.
+
+config AIC8800_SDIO_BTLPM
+	bool "AIC8800 Bluetooth Support"
+	depends on AIC8800_SDIO_WLAN
+	help
+	  Support AICSemi AIC8800 bluetooth.
