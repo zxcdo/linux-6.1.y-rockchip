@@ -383,7 +383,7 @@
 		 * - SDIO_RESET_L_WL_REG_ON
 		 * - PDN (power down when low)
 		 */
-		post-power-on-delay-ms = <10>;
+		post-power-on-delay-ms = <200>;
 		reset-gpios = <&gpio3 RK_PC7 GPIO_ACTIVE_LOW>;
 		status = "okay";
 	};
@@ -2141,6 +2141,8 @@
 
 /* SDIO Wifi */
 &sdio {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	max-frequency = <150000000>;
 	no-sd;
 	no-mmc;
@@ -2154,6 +2156,17 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&sdiom1_pins>;
 	status = "okay";
+
+	wifi: wifi@1 {
+		//compatible = "aicsemi,aic8800-fdrv";
+		compatible = "brcm,bcm4329-fmac";
+		reg = <1>;
+		interrupt-parent = <&gpio3>;
+		interrupts = <RK_PB1 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "host-wake";
+		pinctrl-names = "default";
+		pinctrl-0 = <&wifi_wake_host_h>;
+	};
 };
 
 &pinctrl {
