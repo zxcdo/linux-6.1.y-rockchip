@@ -39,6 +39,6 @@ ifeq ($(CONFIG_PLATFORM_UBUNTU), y)
 endif
 ###################################
 
-obj-$(CONFIG_AIC8800_SDIO) += bsp/
+obj-$(CONFIG_AIC8800_SDIO_WLAN) += bsp/
 obj-$(CONFIG_AIC8800_SDIO_WLAN) += fdrv/
 obj-$(CONFIG_AIC8800_SDIO_BTLPM) += btlpm/
