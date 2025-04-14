@@ -815,7 +815,7 @@ static int __init bluesleep_probe(struct platform_device *pdev)
 	}
 
 	/* set host_wake_assert */
-	aicbsp_get_feature(&bsp_feature_lpm);
+	aicwf_sdio_aicbsp_get_feature(&bsp_feature_lpm);
 	if (bsp_feature_lpm.irqf == 0)
 		bsi->host_wake_assert = (config == OF_GPIO_ACTIVE_LOW) ? 0 : 1;
 	else

@@ -952,7 +952,7 @@ static ssize_t btchr_read(struct file *file_p,
 }
 
 #ifdef CONFIG_SUPPORT_VENDOR_APCF
-void btchr_external_write(char* buff, int len){
+void aicwf_sdio_btchr_external_write(char* buff, int len){
 	struct hci_dev *hdev;
 	struct sk_buff *skb;
 	int i;
@@ -988,7 +988,7 @@ void btchr_external_write(char* buff, int len){
     data->hdev->send(skb);
 }
 
-EXPORT_SYMBOL(btchr_external_write);
+EXPORT_SYMBOL(aicwf_sdio_btchr_external_write);
 #endif //CONFIG_SUPPORT_VENDOR_APCF
 
 //extern struct rwnx_plat *g_rwnx_plat;

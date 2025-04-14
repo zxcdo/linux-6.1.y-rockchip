@@ -379,7 +379,7 @@ static void __exit aicbsp_exit(void)
 	mutex_destroy(&aicbsp_power_lock);
 	aicbsp_resv_mem_deinit();
 #ifdef CONFIG_PREALLOC_TXQ
-    aicwf_prealloc_txq_free();
+    aicwf_sdio_prealloc_txq_free();
 #endif
 	printk("%s\n", __func__);
 }

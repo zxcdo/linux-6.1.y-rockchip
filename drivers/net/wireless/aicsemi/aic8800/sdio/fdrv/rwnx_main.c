@@ -6808,7 +6808,7 @@ int rwnx_get_custom_mac_addr(u8_l *mac_addr_efuse){
 }
 #endif
 
-extern void *aicwf_prealloc_txq_alloc(size_t size);
+extern void *aicwf_sdio_prealloc_txq_alloc(size_t size);
 int rwnx_cfg80211_init(struct rwnx_plat *rwnx_plat, void **platform_data)
 {
 	struct rwnx_hw *rwnx_hw;
@@ -6833,7 +6833,7 @@ int rwnx_cfg80211_init(struct rwnx_plat *rwnx_plat, void **platform_data)
 	RWNX_DBG(RWNX_FN_ENTRY_STR);
 
 	memset(fw_path, 0, 200);
-	aicbsp_get_feature(&feature, fw_path);
+	aicwf_sdio_aicbsp_get_feature(&feature, fw_path);
 
 	get_random_bytes(&dflt_mac[4], 2);
 
@@ -6906,7 +6906,7 @@ int rwnx_cfg80211_init(struct rwnx_plat *rwnx_plat, void **platform_data)
 	rwnx_hwq_init(rwnx_hw);
 
 #ifdef CONFIG_PREALLOC_TXQ
-        rwnx_hw->txq = (struct rwnx_txq*)aicwf_prealloc_txq_alloc(sizeof(struct rwnx_txq)*NX_NB_TXQ);
+        rwnx_hw->txq = (struct rwnx_txq*)aicwf_sdio_prealloc_txq_alloc(sizeof(struct rwnx_txq)*NX_NB_TXQ);
 #endif
 
 	for (i = 0; i < NX_NB_TXQ; i++) {
@@ -7320,9 +7320,9 @@ static int __init rwnx_mod_init(void)
     rwnx_init_cmd_array();
 
 //#ifndef CONFIG_PLATFORM_ROCKCHIP
-	if (aicbsp_set_subsys(AIC_WIFI, AIC_PWR_ON) < 0) {
+	if (aicwf_sdio_aicbsp_set_subsys(AIC_WIFI, AIC_PWR_ON) < 0) {
 		AICWFDBG(LOGERROR, "%s, set power on fail!\n", __func__);
-		if(!aicbsp_get_load_fw_in_fdrv()){
+		if(!aicwf_sdio_aicbsp_get_load_fw_in_fdrv()){
 			return -ENODEV;
 		}
 	}
@@ -7339,7 +7339,7 @@ static int __init rwnx_mod_init(void)
 #ifdef AICWF_USB_SUPPORT
 		aicwf_usb_exit();
 #endif /*AICWF_USB_SUPPORT */
-        aicbsp_set_subsys(AIC_WIFI, AIC_PWR_OFF);
+        aicwf_sdio_aicbsp_set_subsys(AIC_WIFI, AIC_PWR_OFF);
 		return -ENODEV;
 	}
 
@@ -7369,7 +7369,7 @@ static void __exit rwnx_mod_exit(void)
 	aicwf_usb_exit();
 #endif
 //#ifndef CONFIG_PLATFORM_ROCKCHIP
-	aicbsp_set_subsys(AIC_WIFI, AIC_PWR_OFF);
+	aicwf_sdio_aicbsp_set_subsys(AIC_WIFI, AIC_PWR_OFF);
 //#endif
     rwnx_free_cmd_array();
 
