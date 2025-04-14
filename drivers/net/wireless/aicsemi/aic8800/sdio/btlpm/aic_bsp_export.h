@@ -13,7 +13,7 @@ struct aicbsp_feature_t {
 	uint8_t irqf;
 };
 
-int aicbsp_set_subsys(int, int);
-int aicbsp_get_feature(struct aicbsp_feature_t *feature);
+int aicwf_sdio_aicbsp_set_subsys(int, int);
+int aicwf_sdio_aicbsp_get_feature(struct aicbsp_feature_t *feature);
 
 #endif

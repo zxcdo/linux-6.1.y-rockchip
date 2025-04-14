@@ -2061,7 +2061,7 @@ int aicwf_misc_ram_init_8800dc(struct aic_sdio_dev *sdiodev)
 }
 
 #ifdef CONFIG_DPD
-int aicwf_dpd_calib_8800dc(struct aic_sdio_dev *sdiodev, rf_misc_ram_lite_t *dpd_res)
+int aicwf_dpd_calib_8800dc(struct aic_sdio_dev *sdiodev, rf_misc_ram_lite_t *aicwf_sdio_dpd_res)
 {
     int ret = 0;
     uint32_t fw_addr, boot_type;
@@ -2113,7 +2113,7 @@ int aicwf_dpd_calib_8800dc(struct aic_sdio_dev *sdiodev, rf_misc_ram_lite_t *dpd
                 AICWFDBG(LOGERROR, "bit_mask[0x%x] rd fail: %d\n",  ram_base_addr + i * 4, ret);
                 return ret;
             }
-            dpd_res->bit_mask[i] = cfm.memdata;
+            aicwf_sdio_dpd_res->bit_mask[i] = cfm.memdata;
         }
         // dpd_high
         ram_base_addr = misc_ram_addr + offsetof(rf_misc_ram_t, dpd_high);
@@ -2124,7 +2124,7 @@ int aicwf_dpd_calib_8800dc(struct aic_sdio_dev *sdiodev, rf_misc_ram_lite_t *dpd
                 AICWFDBG(LOGERROR, "bit_mask[0x%x] rd fail: %d\n",  ram_base_addr + i * 4, ret);
                 return ret;
             }
-            dpd_res->dpd_high[i] = cfm.memdata;
+            aicwf_sdio_dpd_res->dpd_high[i] = cfm.memdata;
         }
         // loft_res
         ram_base_addr = misc_ram_addr + offsetof(rf_misc_ram_t, loft_res);
@@ -2135,21 +2135,21 @@ int aicwf_dpd_calib_8800dc(struct aic_sdio_dev *sdiodev, rf_misc_ram_lite_t *dpd
                 AICWFDBG(LOGERROR, "bit_mask[0x%x] rd fail: %d\n",  ram_base_addr + i * 4, ret);
                 return ret;
             }
-            dpd_res->loft_res[i] = cfm.memdata;
+            aicwf_sdio_dpd_res->loft_res[i] = cfm.memdata;
         }
     }
     return ret;
 }
 
-int aicwf_dpd_result_apply_8800dc(struct aic_sdio_dev *sdiodev, rf_misc_ram_lite_t *dpd_res)
+int aicwf_dpd_result_apply_8800dc(struct aic_sdio_dev *sdiodev, rf_misc_ram_lite_t *aicwf_sdio_dpd_res)
 {
     int ret = 0;
     uint32_t cfg_base = 0x10164;
     struct dbg_mem_read_cfm cfm;
     uint32_t misc_ram_addr;
     uint32_t ram_base_addr, ram_byte_cnt;
-    AICWFDBG(LOGINFO, "bit_mask[1]=%x\n", dpd_res->bit_mask[1]);
-    if (dpd_res->bit_mask[1] == 0) {
+    AICWFDBG(LOGINFO, "bit_mask[1]=%x\n", aicwf_sdio_dpd_res->bit_mask[1]);
+    if (aicwf_sdio_dpd_res->bit_mask[1] == 0) {
         AICWFDBG(LOGERROR, "void dpd_res, bypass it.\n");
         return 0;
     }
@@ -2164,28 +2164,28 @@ int aicwf_dpd_result_apply_8800dc(struct aic_sdio_dev *sdiodev, rf_misc_ram_lite
     AICWFDBG(LOGINFO, "misc_ram_addr: %x\n", misc_ram_addr);
     /* Copy dpd_res on the Embedded side */
     // bit_mask
-    AICWFDBG(LOGINFO, "bit_mask[0]=%x\n", dpd_res->bit_mask[0]);
+    AICWFDBG(LOGINFO, "bit_mask[0]=%x\n", aicwf_sdio_dpd_res->bit_mask[0]);
     ram_base_addr = misc_ram_addr + offsetof(rf_misc_ram_t, bit_mask);
     ram_byte_cnt = MEMBER_SIZE(rf_misc_ram_t, bit_mask) + MEMBER_SIZE(rf_misc_ram_t, reserved);
-    ret = rwnx_send_dbg_mem_block_write_req(sdiodev, ram_base_addr, ram_byte_cnt, (u32 *)&dpd_res->bit_mask[0]);
+    ret = rwnx_send_dbg_mem_block_write_req(sdiodev, ram_base_addr, ram_byte_cnt, (u32 *)&aicwf_sdio_dpd_res->bit_mask[0]);
     if (ret) {
         AICWFDBG(LOGERROR, "bit_mask wr fail: %x, ret:%d\r\n", ram_base_addr, ret);
         return ret;
     }
     // dpd_high
-    AICWFDBG(LOGINFO, "dpd_high[0]=%x\n", dpd_res->dpd_high[0]);
+    AICWFDBG(LOGINFO, "dpd_high[0]=%x\n", aicwf_sdio_dpd_res->dpd_high[0]);
     ram_base_addr = misc_ram_addr + offsetof(rf_misc_ram_t, dpd_high);
     ram_byte_cnt = MEMBER_SIZE(rf_misc_ram_t, dpd_high);
-    ret = rwnx_send_dbg_mem_block_write_req(sdiodev, ram_base_addr, ram_byte_cnt, (u32 *)&dpd_res->dpd_high[0]);
+    ret = rwnx_send_dbg_mem_block_write_req(sdiodev, ram_base_addr, ram_byte_cnt, (u32 *)&aicwf_sdio_dpd_res->dpd_high[0]);
     if (ret) {
         AICWFDBG(LOGERROR, "dpd_high wr fail: %x, ret:%d\r\n", ram_base_addr, ret);
         return ret;
     }
     // loft_res
-    AICWFDBG(LOGINFO, "loft_res[0]=%x\n", dpd_res->loft_res[0]);
+    AICWFDBG(LOGINFO, "loft_res[0]=%x\n", aicwf_sdio_dpd_res->loft_res[0]);
     ram_base_addr = misc_ram_addr + offsetof(rf_misc_ram_t, loft_res);
     ram_byte_cnt = MEMBER_SIZE(rf_misc_ram_t, loft_res);
-    ret = rwnx_send_dbg_mem_block_write_req(sdiodev, ram_base_addr, ram_byte_cnt, (u32 *)&dpd_res->loft_res[0]);
+    ret = rwnx_send_dbg_mem_block_write_req(sdiodev, ram_base_addr, ram_byte_cnt, (u32 *)&aicwf_sdio_dpd_res->loft_res[0]);
     if (ret) {
         AICWFDBG(LOGERROR, "loft_res wr fail: %x, ret:%d\r\n", ram_base_addr, ret);
         return ret;
@@ -2194,7 +2194,7 @@ int aicwf_dpd_result_apply_8800dc(struct aic_sdio_dev *sdiodev, rf_misc_ram_lite
 }
 
 #ifndef CONFIG_FORCE_DPD_CALIB
-int aicwf_dpd_result_load_8800dc(struct aic_sdio_dev *sdiodev, rf_misc_ram_lite_t *dpd_res)
+int aicwf_dpd_result_load_8800dc(struct aic_sdio_dev *sdiodev, rf_misc_ram_lite_t *aicwf_sdio_dpd_res)
 {
     int ret = 0;
     int size;
@@ -2215,7 +2215,7 @@ int aicwf_dpd_result_load_8800dc(struct aic_sdio_dev *sdiodev, rf_misc_ram_lite_
         return -1;
     }
     AICWFDBG(LOGINFO, "### Load file done: %s, size=%d, dst[0]=%x\n", filename, size, dst[0]);
-    memcpy((u8 *)dpd_res, (u8 *)dst, sizeof(rf_misc_ram_lite_t));
+    memcpy((u8 *)aicwf_sdio_dpd_res, (u8 *)dst, sizeof(rf_misc_ram_lite_t));
     if (dst) {
         #ifndef CONFIG_FIRMWARE_ARRAY
         vfree(dst);

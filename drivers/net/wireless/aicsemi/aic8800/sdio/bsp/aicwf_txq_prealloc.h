@@ -1,4 +1,4 @@
 
 
-void aicwf_prealloc_txq_free(void);
+void aicwf_sdio_prealloc_txq_free(void);
 

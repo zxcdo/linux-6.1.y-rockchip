@@ -7985,7 +7985,7 @@ void aic_ipc_setting(struct rwnx_vif *rwnx_vif){
 }
 
 
-extern void *aicwf_prealloc_txq_alloc(size_t size);
+extern void *aicwf_usb_prealloc_txq_alloc(size_t size);
 extern int aicwf_vendor_init(struct wiphy *wiphy);
 int rwnx_cfg80211_init(struct rwnx_plat *rwnx_plat, void **platform_data)
 {
@@ -8094,7 +8094,7 @@ if((g_rwnx_plat->usbdev->chipid == PRODUCT_ID_AIC8801) ||
     rwnx_hwq_init(rwnx_hw);
 
 #ifdef CONFIG_PREALLOC_TXQ
-    rwnx_hw->txq = (struct rwnx_txq*)aicwf_prealloc_txq_alloc(sizeof(struct rwnx_txq)*NX_NB_TXQ);
+    rwnx_hw->txq = (struct rwnx_txq*)aicwf_usb_prealloc_txq_alloc(sizeof(struct rwnx_txq)*NX_NB_TXQ);
 #endif
 
     for (i = 0; i < NX_NB_TXQ; i++) {

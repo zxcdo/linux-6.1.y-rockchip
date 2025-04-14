@@ -206,7 +206,7 @@ struct aicwf_tx_priv *aicwf_tx_init(void *arg)
 
 	atomic_set(&tx_priv->aggr_count, 0);
 #ifdef  CONFIG_RESV_MEM_SUPPORT
-	tx_priv->aggr_buf = aicbsp_resv_mem_alloc_skb(MAX_AGGR_TXPKT_LEN, AIC_RESV_MEM_TXDATA);
+	tx_priv->aggr_buf = aicwf_sdio_aicbsp_resv_mem_alloc_skb(MAX_AGGR_TXPKT_LEN, AIC_RESV_MEM_TXDATA);
 #else
 	tx_priv->aggr_buf = dev_alloc_skb(MAX_AGGR_TXPKT_LEN);
 #endif
@@ -225,7 +225,7 @@ void aicwf_tx_deinit(struct aicwf_tx_priv *tx_priv)
 {
 	if (tx_priv && tx_priv->aggr_buf) {
 #ifdef  CONFIG_RESV_MEM_SUPPORT
-		aicbsp_resv_mem_kfree_skb(tx_priv->aggr_buf, AIC_RESV_MEM_TXDATA);
+		aicwf_sdio_aicbsp_resv_mem_kfree_skb(tx_priv->aggr_buf, AIC_RESV_MEM_TXDATA);
 #else
 		dev_kfree_skb(tx_priv->aggr_buf);
 #endif

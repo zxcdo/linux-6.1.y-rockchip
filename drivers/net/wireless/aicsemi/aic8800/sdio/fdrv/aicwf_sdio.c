@@ -377,7 +377,7 @@ static int rwnx_register_hostwake_irq(struct device *dev)
 	int irq_flags;
 //TODO hostwake_irq_num hostwake_irq_num and wakeup_enable
 
-	aicbsp_get_feature(&aicwf_feature, NULL);
+	aicwf_sdio_aicbsp_get_feature(&aicwf_feature, NULL);
 	if (aicwf_feature.irqf == 0)
 		flag_edge = IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND;
 	else
@@ -2238,8 +2238,8 @@ int aicwf_sdio_func_init(struct aic_sdio_dev *sdiodev)
 	struct aicbsp_feature_t feature;
 	u8 val = 0;
 
-	aicbsp_get_feature(&feature, NULL);
-    aicwf_sdio_reg_init(sdiodev);
+	aicwf_sdio_aicbsp_get_feature(&feature, NULL);
+	aicwf_sdio_reg_init(sdiodev);
 
 	host = sdiodev->func->card->host;
 
@@ -2321,8 +2321,8 @@ int aicwf_sdiov3_func_init(struct aic_sdio_dev *sdiodev)
 	//u8 val = 0;
     u8 val1 = 0;
 
-	aicbsp_get_feature(&feature, NULL);
-    aicwf_sdio_reg_init(sdiodev);
+	aicwf_sdio_aicbsp_get_feature(&feature, NULL);
+	aicwf_sdio_reg_init(sdiodev);
 
 	host = sdiodev->func->card->host;
 

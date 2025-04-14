@@ -54,11 +54,11 @@ typedef struct {
 #define MEMBER_SIZE(type, member)   sizeof(((type *)0)->member)
 #define DPD_RESULT_SIZE_8800DC      sizeof(rf_misc_ram_lite_t)
 
-extern rf_misc_ram_lite_t dpd_res;
+extern rf_misc_ram_lite_t aicwf_sdio_dpd_res;
 #endif
 
-int aicbsp_set_subsys(int, int);
-int aicbsp_get_feature(struct aicbsp_feature_t *feature, char *fw_path);
+int aicwf_sdio_aicbsp_set_subsys(int, int);
+int aicwf_sdio_aicbsp_get_feature(struct aicbsp_feature_t *feature, char *fw_path);
 struct sk_buff *aicbsp_resv_mem_alloc_skb(unsigned int length, uint32_t id);
 void aicbsp_resv_mem_kfree_skb(struct sk_buff *skb, uint32_t id);
 
