@@ -7,4 +7,5 @@ config AIC8800_SUPPORT
 
 if AIC8800_SUPPORT
 source "drivers/net/wireless/aicsemi/aic8800/sdio/Kconfig"
+source "drivers/net/wireless/aicsemi/aic8800/usb/Kconfig"
 endif
