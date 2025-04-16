@@ -205,7 +205,7 @@
 		vin-supply = <&vcc_pd>;
 	};
 
-	vcc5v0_sys: regulator-vcc5v0-usb {
+	vcc5v0_sys: regulator-vcc5v0-sys {
 		compatible = "regulator-fixed";
 		regulator-name = "vcc5v0_sys";
 		enable-active-high;
@@ -225,6 +225,20 @@
 		regulator-boot-on;
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
+		vin-supply = <&vcc3v8_sys>;
+	};
+
+	vcc3v0_lcd: regulator-vcc3v0-lcd {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc3v0_lcd";
+		enable-active-high;
+		gpio = <&gpio0 RK_PC2 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&vcc3v0_lcd_en>;
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <3000000>;
+		regulator-max-microvolt = <3000000>;
 		vin-supply = <&vcc3v8_sys>;
 	};
 };
@@ -324,8 +338,8 @@
 	pinctrl-names = "default";
 	phy-handle = <&rgmii_phy1>;
 
-	tx_delay = <0x3c>;
-	rx_delay = <0x2f>;
+	tx_delay = <0x4e>;
+	rx_delay = <0x2d>;
 
 	snps,reset-gpio = <&gpio4 RK_PC2 GPIO_ACTIVE_LOW>;
 	snps,reset-active-low;
@@ -346,35 +360,6 @@
 		pinctrl-0 = <&gmac_int>;
 	};
 };
-
-/*
-&gmac1 {
-	phy-mode = "rgmii";
-	clock_in_out = "input";
-
-	snps,reset-gpio = <&gpio4 RK_PC2 GPIO_ACTIVE_LOW>;
-	snps,reset-active-low;
-	// Reset time is 20ms, 100ms for rtl8211f
-	snps,reset-delays-us = <0 20000 100000>;
-
-	assigned-clocks = <&cru SCLK_GMAC1_RX_TX>, <&cru SCLK_GMAC1>;
-	assigned-clock-parents = <&cru SCLK_GMAC1_RGMII_SPEED>, <&gmac1_clkin>;
-
-	pinctrl-names = "default";
-	pinctrl-0 = <&gmac1m1_miim
-		     &gmac1m1_tx_bus2
-		     &gmac1m1_rx_bus2
-		     &gmac1m1_rgmii_clk
-		     &gmac1m1_rgmii_bus
-		     &gmac1m1_clkinout>;
-
-	tx_delay = <0x4f>;
-	rx_delay = <0x26>;
-
-	phy-handle = <&rgmii_phy1>;
-	status = "disabled";
-};
-*/
 
 &gpu {
 	mali-supply = <&vdd_gpu>;
@@ -708,7 +693,7 @@
 
 		continues-clk = <1>;
 
-		//power-domains = <&power RK3588_PD_VI>;
+		power-domains = <&power RK3568_PD_VI>;
 
 		rockchip,camera-module-index = <0>;
 		rockchip,camera-module-facing = "back";
@@ -791,6 +776,20 @@
 };
 
 &pinctrl {
+	bluetooth {
+		bt_reg_on_h: bt-reg-on-h {
+			rockchip,pins = <2 RK_PB7 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		bt_wake_host_h: bt-wake-host-h {
+			rockchip,pins = <2 RK_PC0 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		bt_host_wake_h: bt-host-wake-h {
+			rockchip,pins = <2 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
 	gpio-key {
 		key_factory_pin: key-factory-pin {
 			rockchip,pins = <0 RK_PA5 RK_FUNC_GPIO &pcfg_pull_none>;
@@ -831,6 +830,12 @@
 		};
 	};
 
+	lcd {
+		lcd_dc_pin: lcd-dc-pin {
+			rockchip,pins = <0 RK_PC6 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
 	pmic {
 		pmic_int: pmic_int {
 			rockchip,pins =
@@ -858,8 +863,8 @@
 			rockchip,pins = <0 RK_PA6 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 
-		vcc3v3_hdmirx_en: vcc3v3-hdmirx-en {
-			rockchip,pins = <0 RK_PC7 RK_FUNC_GPIO &pcfg_pull_none>;
+		vcc3v0_lcd_en: vcc3v0-lcd-en {
+			rockchip,pins = <0 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 
@@ -1007,7 +1012,6 @@
 	vqmmc-supply = <&vccio_sd>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&sdmmc0_bus4 &sdmmc0_clk &sdmmc0_cmd &sdmmc0_det>;
-	rockchip,default-sample-phase = <180>;
 	status = "okay";
 };
 
@@ -1029,6 +1033,7 @@
 	non-removable;
 	pinctrl-names = "default";
 	pinctrl-0 = <&sdmmc1_bus4 &sdmmc1_cmd &sdmmc1_clk>;
+	rockchip,default-sample-phase = <180>;
 	status = "okay";
 
 	wifi: wifi@1 {
@@ -1042,8 +1047,75 @@
 	};
 };
 
+/* LCD:   st7789v, 135(H) x 240(V), 8pin, 4Line SPI
+ * pin1:  LEDA:  LED Anode.                                                      --> vcc3v0_lcd
+ * pin2:  GND:   Power Ground.                                                   --> gnd
+ * pin3:  RESET: This signal will reset th device, Signal is active low.         --> vcc3v0_lcd
+ * pin4:  RS:    Display data/command selection pin in 4-line serial interface.  --> gpio0 RK_PC6
+ * pin5:  SDA:   SPI interface input/output pin.                                 --> gpio0 RK_PB6 spi0_mosi_m0
+ * pin6:  SCL:   This pin is used to be serial interface clock                   --> gpio0 RK_PB5 spi0_clk_m0
+ * pin7:  VDD:   Power Supply for Analog                                         --> vcc3v0_lcd
+ * pin8:  CS:    Chip selection pin. Low enable, High disable.                   --> gnd
+ */
+&spi0 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	assigned-clock-rates = <200000000>;
+	num-cs = <1>;
+	pinctrl-names = "default", "high_speed";
+	pinctrl-0 = <&spi0m0_pins>;
+	pinctrl-1 = <&spi0m0_pins_hs>;
+	status = "okay";
+
+	panel@0 {
+		compatible = "sitronix,st7789v";
+		reg = <0>;
+		power-supply = <&vcc3v0_lcd>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&lcd_dc_pin>;
+		dc-gpios = <&gpio0 RK_PC6 GPIO_ACTIVE_HIGH>;
+
+		/* 50Mhz */
+		spi-max-frequency = <50000000>;
+
+		//width = <135>;
+		//height = <240>;
+		fps = <30>;
+		buswidth = <8>;
+		rotate = <90>;
+
+		/* debug: 0-7 */
+		debug = <0>;
+		//spi-cpol;
+		//spi-cpha;
+	};
+};
+
 &tsadc {
 	status = "okay";
+};
+
+/* AIC8800 Bluetooth */
+&uart1 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart1m0_xfer &uart1m0_ctsn &uart1m0_rtsn>;
+
+	bluetooth: bluetooth {
+		compatible = "brcm,bcm43438-bt";
+		max-speed = <1500000>;
+
+                interrupt-parent = <&gpio2>;
+                interrupts = <RK_PC0 IRQ_TYPE_LEVEL_HIGH>;
+                interrupt-names = "host-wakeup";
+
+		device-wakeup-gpios = <&gpio2 RK_PC2 GPIO_ACTIVE_HIGH>;
+		shutdown-gpios = <&gpio2 RK_PB7 GPIO_ACTIVE_HIGH>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&bt_reg_on_h &bt_wake_host_h &bt_host_wake_h>;
+	};
 };
 
 /* debug */
