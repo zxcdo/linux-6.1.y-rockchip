@@ -1,2 +1,0 @@
-obj-$(CONFIG_AIC8800_SUPPORT) += sdio/
-obj-$(CONFIG_AIC8800_SUPPORT) += usb/

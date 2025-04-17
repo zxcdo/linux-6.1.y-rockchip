@@ -1682,6 +1682,18 @@ static void hdmi_video_packetize(struct dw_hdmi *hdmi)
 		return;
 	}
 
+	/*
+	 * GCP is sent by default after power on.
+	 * In kernel 4.19/5.10, we did not intentionally
+	 * disable sending of GCP. The kernel 6.1 upstream
+	 * code disable GCP transmission in 8bit color depth.
+	 * Therefore, when you need to use avmute function,
+	 * it is need to enable GCP transmission.
+	 */
+	val = hdmi_readb(hdmi, HDMI_FC_GCP);
+	if (val & (HDMI_FC_GCP_SET_AVMUTE | HDMI_FC_GCP_CLEAR_AVMUTE))
+		clear_gcp_auto = 0;
+
 	/* set the packetizer registers */
 	val = (color_depth << HDMI_VP_PR_CD_COLOR_DEPTH_OFFSET) &
 	      HDMI_VP_PR_CD_COLOR_DEPTH_MASK;
@@ -3619,8 +3631,25 @@ static void dw_hdmi_connector_force(struct drm_connector *connector)
 	mutex_unlock(&hdmi->mutex);
 }
 
+static int drm_hdmi_probe_single_connector_modes(struct drm_connector *connector,
+						 uint32_t maxX, uint32_t maxY)
+{
+	struct dw_hdmi *hdmi =
+		container_of(connector, struct dw_hdmi, connector);
+	struct drm_display_info *info = &connector->display_info;
+	void *data = hdmi->plat_data->phy_data;
+	int ret;
+
+	ret = drm_helper_probe_single_connector_modes(connector, maxX, maxY);
+
+	if (hdmi->plat_data->get_mode_color_caps)
+		hdmi->plat_data->get_mode_color_caps(connector, info, data);
+
+	return ret;
+}
+
 static const struct drm_connector_funcs dw_hdmi_connector_funcs = {
-	.fill_modes = drm_helper_probe_single_connector_modes,
+	.fill_modes = drm_hdmi_probe_single_connector_modes,
 	.detect = dw_hdmi_connector_detect,
 	.destroy = drm_connector_cleanup,
 	.force = dw_hdmi_connector_force,

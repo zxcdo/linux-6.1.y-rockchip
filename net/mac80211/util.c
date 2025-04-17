@@ -288,52 +288,6 @@ __le16 ieee80211_ctstoself_duration(struct ieee80211_hw *hw,
 }
 EXPORT_SYMBOL(ieee80211_ctstoself_duration);
 
-static void wake_tx_push_queue(struct ieee80211_local *local,
-			       struct ieee80211_sub_if_data *sdata,
-			       struct ieee80211_txq *queue)
-{
-	int q = sdata->vif.hw_queue[queue->ac];
-	struct ieee80211_tx_control control = {
-		.sta = queue->sta,
-	};
-	struct sk_buff *skb;
-	unsigned long flags;
-	bool q_stopped;
-
-	while (1) {
-		spin_lock_irqsave(&local->queue_stop_reason_lock, flags);
-		q_stopped = local->queue_stop_reasons[q];
-		spin_unlock_irqrestore(&local->queue_stop_reason_lock, flags);
-
-		if (q_stopped)
-			break;
-
-		skb = ieee80211_tx_dequeue(&local->hw, queue);
-		if (!skb)
-			break;
-
-		drv_tx(local, &control, skb);
-	}
-}
-
-/* wake_tx_queue handler for driver not implementing a custom one*/
-void ieee80211_handle_wake_tx_queue(struct ieee80211_hw *hw,
-				    struct ieee80211_txq *txq)
-{
-	struct ieee80211_local *local = hw_to_local(hw);
-	struct ieee80211_sub_if_data *sdata = vif_to_sdata(txq->vif);
-	struct ieee80211_txq *queue;
-
-	/* Use ieee80211_next_txq() for airtime fairness accounting */
-	ieee80211_txq_schedule_start(hw, txq->ac);
-	while ((queue = ieee80211_next_txq(hw, txq->ac))) {
-		wake_tx_push_queue(local, sdata, queue);
-		ieee80211_return_txq(hw, queue, false);
-	}
-	ieee80211_txq_schedule_end(hw, txq->ac);
-}
-EXPORT_SYMBOL(ieee80211_handle_wake_tx_queue);
-
 static void __ieee80211_wake_txqs(struct ieee80211_sub_if_data *sdata, int ac)
 {
 	struct ieee80211_local *local = sdata->local;
@@ -444,6 +398,39 @@ void ieee80211_wake_txqs(struct tasklet_struct *t)
 	spin_unlock_irqrestore(&local->queue_stop_reason_lock, flags);
 }
 
+void ieee80211_propagate_queue_wake(struct ieee80211_local *local, int queue)
+{
+	struct ieee80211_sub_if_data *sdata;
+	int n_acs = IEEE80211_NUM_ACS;
+
+	if (local->ops->wake_tx_queue)
+		return;
+
+	if (local->hw.queues < IEEE80211_NUM_ACS)
+		n_acs = 1;
+
+	list_for_each_entry_rcu(sdata, &local->interfaces, list) {
+		int ac;
+
+		if (!sdata->dev)
+			continue;
+
+		if (sdata->vif.cab_queue != IEEE80211_INVAL_HW_QUEUE &&
+		    local->queue_stop_reasons[sdata->vif.cab_queue] != 0)
+			continue;
+
+		for (ac = 0; ac < n_acs; ac++) {
+			int ac_queue = sdata->vif.hw_queue[ac];
+
+			if (ac_queue == queue ||
+			    (sdata->vif.cab_queue == queue &&
+			     local->queue_stop_reasons[ac_queue] == 0 &&
+			     skb_queue_empty(&local->pending[ac_queue])))
+				netif_wake_subqueue(sdata->dev, ac);
+		}
+	}
+}
+
 static void __ieee80211_wake_queue(struct ieee80211_hw *hw, int queue,
 				   enum queue_stop_reason reason,
 				   bool refcounted,
@@ -474,7 +461,11 @@ static void __ieee80211_wake_queue(struct ieee80211_hw *hw, int queue,
 		/* someone still has this queue stopped */
 		return;
 
-	if (!skb_queue_empty(&local->pending[queue]))
+	if (skb_queue_empty(&local->pending[queue])) {
+		rcu_read_lock();
+		ieee80211_propagate_queue_wake(local, queue);
+		rcu_read_unlock();
+	} else
 		tasklet_schedule(&local->tx_pending_tasklet);
 
 	/*
@@ -484,10 +475,12 @@ static void __ieee80211_wake_queue(struct ieee80211_hw *hw, int queue,
 	 * release someone's lock, but it is fine because all the callers of
 	 * __ieee80211_wake_queue call it right before releasing the lock.
 	 */
-	if (reason == IEEE80211_QUEUE_STOP_REASON_DRIVER)
-		tasklet_schedule(&local->wake_txqs_tasklet);
-	else
-		_ieee80211_wake_txqs(local, flags);
+	if (local->ops->wake_tx_queue) {
+		if (reason == IEEE80211_QUEUE_STOP_REASON_DRIVER)
+			tasklet_schedule(&local->wake_txqs_tasklet);
+		else
+			_ieee80211_wake_txqs(local, flags);
+	}
 }
 
 void ieee80211_wake_queue_by_reason(struct ieee80211_hw *hw, int queue,
@@ -515,6 +508,8 @@ static void __ieee80211_stop_queue(struct ieee80211_hw *hw, int queue,
 				   bool refcounted)
 {
 	struct ieee80211_local *local = hw_to_local(hw);
+	struct ieee80211_sub_if_data *sdata;
+	int n_acs = IEEE80211_NUM_ACS;
 
 	trace_stop_queue(local, queue, reason);
 
@@ -526,7 +521,27 @@ static void __ieee80211_stop_queue(struct ieee80211_hw *hw, int queue,
 	else
 		local->q_stop_reasons[queue][reason]++;
 
-	set_bit(reason, &local->queue_stop_reasons[queue]);
+	if (__test_and_set_bit(reason, &local->queue_stop_reasons[queue]))
+		return;
+
+	if (local->hw.queues < IEEE80211_NUM_ACS)
+		n_acs = 1;
+
+	rcu_read_lock();
+	list_for_each_entry_rcu(sdata, &local->interfaces, list) {
+		int ac;
+
+		if (!sdata->dev)
+			continue;
+
+		for (ac = 0; ac < n_acs; ac++) {
+			if (!local->ops->wake_tx_queue &&
+			    (sdata->vif.hw_queue[ac] == queue ||
+			     sdata->vif.cab_queue == queue))
+				netif_stop_subqueue(sdata->dev, ac);
+		}
+	}
+	rcu_read_unlock();
 }
 
 void ieee80211_stop_queue_by_reason(struct ieee80211_hw *hw, int queue,
@@ -752,7 +767,9 @@ static void __iterate_interfaces(struct ieee80211_local *local,
 	struct ieee80211_sub_if_data *sdata;
 	bool active_only = iter_flags & IEEE80211_IFACE_ITER_ACTIVE;
 
-	list_for_each_entry_rcu(sdata, &local->interfaces, list) {
+	list_for_each_entry_rcu(sdata, &local->interfaces, list,
+				lockdep_is_held(&local->iflist_mtx) ||
+				lockdep_is_held(&local->hw.wiphy->mtx)) {
 		switch (sdata->vif.type) {
 		case NL80211_IFTYPE_MONITOR:
 			if (!(sdata->u.mntr.flags & MONITOR_FLAG_ACTIVE))
@@ -1955,8 +1972,7 @@ static int ieee80211_build_preq_ies_band(struct ieee80211_sub_if_data *sdata,
 	/* Check if any channel in this sband supports at least 80 MHz */
 	for (i = 0; i < sband->n_channels; i++) {
 		if (sband->channels[i].flags & (IEEE80211_CHAN_DISABLED |
-						IEEE80211_CHAN_NO_80MHZ) &
-						(sband->band != NL80211_BAND_2GHZ))
+						IEEE80211_CHAN_NO_80MHZ))
 			continue;
 
 		have_80mhz = true;
@@ -2193,6 +2209,10 @@ u32 ieee80211_sta_get_rates(struct ieee80211_sub_if_data *sdata,
 
 void ieee80211_stop_device(struct ieee80211_local *local)
 {
+	local_bh_disable();
+	ieee80211_handle_queued_frames(local);
+	local_bh_enable();
+
 	ieee80211_led_radio(local, false);
 	ieee80211_mod_tpt_led_trig(local, 0, IEEE80211_TPT_LEDTRIG_FL_RADIO);
 

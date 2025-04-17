@@ -1458,7 +1458,7 @@ static int rkcif_pipeline_close(struct rkcif_pipeline *p)
 	return 0;
 }
 
-static void rkcif_set_sensor_streamon_in_sync_mode(struct rkcif_device *cif_dev)
+void rkcif_set_sensor_streamon_in_sync_mode(struct rkcif_device *cif_dev)
 {
 	struct rkcif_hw *hw = cif_dev->hw_dev;
 	struct rkcif_device *dev = NULL;
@@ -2474,7 +2474,7 @@ static void rkcif_init_reset_monitor(struct rkcif_device *dev)
 	INIT_WORK(&dev->reset_work.work, rkcif_reset_work);
 }
 
-void rkcif_set_sensor_stream(struct work_struct *work)
+static void rkcif_set_sensor_stream(struct work_struct *work)
 {
 	struct rkcif_sensor_work *sensor_work = container_of(work,
 						struct rkcif_sensor_work,

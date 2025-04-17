@@ -1,1 +1,0 @@
-obj-$(CONFIG_WLAN_VENDOR_AIC) += aic8800/

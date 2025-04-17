@@ -13,6 +13,7 @@
  */
 #include <linux/types.h>
 #include <linux/bitops.h>
+#include <linux/cleanup.h>
 #include <linux/errno.h>
 #include <linux/kobject.h>
 #include <linux/mod_devicetable.h>
@@ -128,6 +129,7 @@ static inline struct device_node *of_node_get(struct device_node *node)
 }
 static inline void of_node_put(struct device_node *node) { }
 #endif /* !CONFIG_OF_DYNAMIC */
+DEFINE_FREE(device_node, struct device_node *, if (_T) of_node_put(_T))
 
 /* Pointer for first entry in chain of all nodes. */
 extern struct device_node *of_root;
@@ -362,8 +364,7 @@ extern int of_n_addr_cells(struct device_node *np);
 extern int of_n_size_cells(struct device_node *np);
 extern const struct of_device_id *of_match_node(
 	const struct of_device_id *matches, const struct device_node *node);
-extern int of_alias_from_compatible(const struct device_node *node, char *alias,
-				    int len);
+extern int of_modalias_node(struct device_node *node, char *modalias, int len);
 extern void of_print_phandle_args(const char *msg, const struct of_phandle_args *args);
 extern int __of_parse_phandle_with_args(const struct device_node *np,
 	const char *list_name, const char *cells_name, int cell_count,
@@ -373,10 +374,6 @@ extern int of_parse_phandle_with_args_map(const struct device_node *np,
 	struct of_phandle_args *out_args);
 extern int of_count_phandle_with_args(const struct device_node *np,
 	const char *list_name, const char *cells_name);
-
-/* module functions */
-extern ssize_t of_modalias(const struct device_node *np, char *str, ssize_t len);
-extern int of_request_module(const struct device_node *np);
 
 /* phandle iterator functions */
 extern int of_phandle_iterator_init(struct of_phandle_iterator *it,
@@ -735,17 +732,6 @@ static inline int of_count_phandle_with_args(const struct device_node *np,
 	return -ENOSYS;
 }
 
-static inline ssize_t of_modalias(const struct device_node *np, char *str,
-				  ssize_t len)
-{
-	return -ENODEV;
-}
-
-static inline int of_request_module(const struct device_node *np)
-{
-	return -ENODEV;
-}
-
 static inline int of_phandle_iterator_init(struct of_phandle_iterator *it,
 					   const struct device_node *np,
 					   const char *list_name,
@@ -1022,31 +1008,6 @@ static inline int of_parse_phandle_with_fixed_args(const struct device_node *np,
 {
 	return __of_parse_phandle_with_args(np, list_name, NULL, cell_count,
 					    index, out_args);
-}
-
-/**
- * of_parse_phandle_with_optional_args() - Find a node pointed by phandle in a list
- * @np:		pointer to a device tree node containing a list
- * @list_name:	property name that contains a list
- * @cells_name:	property name that specifies phandles' arguments count
- * @index:	index of a phandle to parse out
- * @out_args:	optional pointer to output arguments structure (will be filled)
- *
- * Same as of_parse_phandle_with_args() except that if the cells_name property
- * is not found, cell_count of 0 is assumed.
- *
- * This is used to useful, if you have a phandle which didn't have arguments
- * before and thus doesn't have a '#*-cells' property but is now migrated to
- * having arguments while retaining backwards compatibility.
- */
-static inline int of_parse_phandle_with_optional_args(const struct device_node *np,
-						      const char *list_name,
-						      const char *cells_name,
-						      int index,
-						      struct of_phandle_args *out_args)
-{
-	return __of_parse_phandle_with_args(np, list_name, cells_name,
-					    0, index, out_args);
 }
 
 /**
@@ -1412,8 +1373,21 @@ static inline int of_property_read_s32(const struct device_node *np,
 #define for_each_child_of_node(parent, child) \
 	for (child = of_get_next_child(parent, NULL); child != NULL; \
 	     child = of_get_next_child(parent, child))
+
+#define for_each_child_of_node_scoped(parent, child) \
+	for (struct device_node *child __free(device_node) =		\
+	     of_get_next_child(parent, NULL);				\
+	     child != NULL;						\
+	     child = of_get_next_child(parent, child))
+
 #define for_each_available_child_of_node(parent, child) \
 	for (child = of_get_next_available_child(parent, NULL); child != NULL; \
+	     child = of_get_next_available_child(parent, child))
+
+#define for_each_available_child_of_node_scoped(parent, child) \
+	for (struct device_node *child __free(device_node) =		\
+	     of_get_next_available_child(parent, NULL);			\
+	     child != NULL;						\
 	     child = of_get_next_available_child(parent, child))
 
 #define for_each_of_cpu_node(cpu) \

@@ -3379,6 +3379,12 @@
 			      "dclk_src_vp0",
 			      "dclk_src_vp1",
 			      "dclk_src_vp2";
+		resets = <&cru SRST_D_VP0>,
+			 <&cru SRST_D_VP1>,
+			 <&cru SRST_D_VP2>;
+		reset-names = "dclk_vp0",
+			      "dclk_vp1",
+			      "dclk_vp2";
 		rockchip,aclk-normal-mode-rates = <500000000>;
 		rockchip,aclk-reset-mode-rates = <594000000>;
 		rockchip,aclk-advanced-mode-rates = <702000000>;
@@ -5420,8 +5426,6 @@
 		clock-names = "baudclk", "apb_pclk";
 		resets = <&cru SRST_CAN0>, <&cru SRST_H_CAN0>;
 		reset-names = "can", "can-apb";
-		dmas = <&dmac0 20>;
-		dma-names = "rx";
 		status = "disabled";
 	};
 
@@ -5433,8 +5437,6 @@
 		clock-names = "baudclk", "apb_pclk";
 		resets = <&cru SRST_CAN1>, <&cru SRST_H_CAN1>;
 		reset-names = "can", "can-apb";
-		dmas = <&dmac1 21>;
-		dma-names = "rx";
 		status = "disabled";
 	};
 

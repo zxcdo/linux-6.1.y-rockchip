@@ -3,7 +3,7 @@
  * PWM driver for Rockchip SoCs
  *
  * Copyright (C) 2014 Beniamino Galvani <b.galvani@gmail.com>
- * Copyright (C) 2014 ROCKCHIP, Inc.
+ * Copyright (C) 2014 Rockchip Electronics Co., Ltd.
  */
 
 #include <linux/clk.h>
@@ -73,7 +73,7 @@
 /*
  * regs for pwm v4
  */
-#define HIWORD_UPDATE(v, l, h)	(((v) << (l)) | (GENMASK(h, l) << 16))
+#define HIWORD_UPDATE(v, l, h)	((((v) << (l)) & GENMASK((h), (l))) | (GENMASK(h, l) << 16))
 
 /* VERSION_ID */
 #define VERSION_ID			0x0
@@ -1599,7 +1599,8 @@ static int rockchip_pwm_set_wave_v4(struct pwm_chip *chip, struct pwm_device *pw
 		ctrl = WAVE_DUTY_EN(config->duty_en) |
 		       WAVE_PERIOD_EN(config->period_en) |
 		       WAVE_WIDTH_MODE(config->width_mode) |
-		       WAVE_UPDATE_MODE(config->update_mode);
+		       WAVE_UPDATE_MODE(config->update_mode) |
+		       WAVE_MEM_CLK_SEL(config->mem_clk_src);
 		max_val = config->duty_max * factor << WAVE_DUTY_MAX_SHIFT |
 			  config->period_max * factor << WAVE_PERIOD_MAX_SHIFT;
 		min_val = config->duty_min * factor << WAVE_DUTY_MIN_SHIFT |
@@ -1613,7 +1614,7 @@ static int rockchip_pwm_set_wave_v4(struct pwm_chip *chip, struct pwm_device *pw
 		ctrl = WAVE_DUTY_EN(false) | WAVE_PERIOD_EN(false);
 	}
 
-	writel_relaxed(CLK_SCALE(pc->scaler), pc->base + CLK_CTRL);
+	writel_relaxed(CLK_SCALE(pc->scaler) | CLK_SRC_SEL(config->clk_src), pc->base + CLK_CTRL);
 	writel_relaxed(ctrl, pc->base + WAVE_CTRL);
 	writel_relaxed(max_val, pc->base + WAVE_MAX);
 	writel_relaxed(min_val, pc->base + WAVE_MIN);
@@ -1621,8 +1622,6 @@ static int rockchip_pwm_set_wave_v4(struct pwm_chip *chip, struct pwm_device *pw
 	writel_relaxed(middle, pc->base + WAVE_MIDDLE);
 
 	writel_relaxed(rpt, pc->base + RPT);
-	writel_relaxed(WAVE_MAX_INT_EN(config->enable) | WAVE_MIDDLE_INT_EN(config->enable),
-		       pc->base + INT_EN);
 
 	pc->wave_en = config->enable;
 
@@ -1652,7 +1651,7 @@ int rockchip_pwm_set_wave(struct pwm_device *pwm, struct rockchip_pwm_wave_confi
 		return -EINVAL;
 	}
 
-	pc->scaler = DIV_ROUND_CLOSEST_ULL(pc->clk_rate, config->clk_rate * 2);
+	pc->scaler = DIV_ROUND_CLOSEST_ULL(pc->clk_rate, config->clk_rate) / 2;
 	if (pc->scaler > 256) {
 		dev_err(chip->dev, "Unsupported scale factor %d(max: 512) for PWM%d\n",
 			pc->scaler * 2, pc->channel_id);
@@ -2259,6 +2258,7 @@ static int rockchip_pwm_probe(struct platform_device *pdev)
 	const struct of_device_id *id;
 	struct rockchip_pwm_chip *pc;
 	struct resource *r;
+	unsigned long irq_flags;
 	u32 enable_conf, ctrl, version;
 	bool enabled;
 	int ret, count;
@@ -2354,36 +2354,24 @@ static int rockchip_pwm_probe(struct platform_device *pdev)
 	}
 
 	if (pc->data->funcs.irq_handler) {
-		if (pc->main_version >= 4) {
-			pc->irq = platform_get_irq(pdev, 0);
-			if (pc->irq < 0) {
-				dev_err(&pdev->dev, "Get irq failed\n");
-				ret = pc->irq;
-				goto err_pclk;
-			}
+		/*
+		 * For pwm v1-v3, the older platform may not support interrupt, and
+		 * common continuous mode can still work well without irq.
+		 *
+		 * For pwm v4, each channel of every controller supports independent
+		 * interrupt and the 'interrupts' property is confirmed to be set
+		 * for each pwm node.
+		 */
+		pc->irq = platform_get_irq(pdev, 0);
+		if (pc->irq > 0) {
+			irq_flags = pc->main_version >= 4 ? IRQF_NO_SUSPEND :
+							    IRQF_NO_SUSPEND | IRQF_SHARED;
 
 			ret = devm_request_irq(&pdev->dev, pc->irq, pc->data->funcs.irq_handler,
-					       IRQF_NO_SUSPEND, "rk_pwm_irq", pc);
+					       irq_flags, "rk_pwm_irq", pc);
 			if (ret) {
 				dev_err(&pdev->dev, "Claim IRQ failed\n");
 				goto err_pclk;
-			}
-		} else {
-			if (IS_ENABLED(CONFIG_PWM_ROCKCHIP_ONESHOT)) {
-				pc->irq = platform_get_irq_optional(pdev, 0);
-				if (pc->irq < 0) {
-					dev_warn(&pdev->dev,
-						 "Can't get oneshot mode irq and oneshot interrupt is unsupported\n");
-				} else {
-					ret = devm_request_irq(&pdev->dev, pc->irq,
-							       pc->data->funcs.irq_handler,
-							       IRQF_NO_SUSPEND | IRQF_SHARED,
-							       "rk_pwm_oneshot_irq", pc);
-					if (ret) {
-						dev_err(&pdev->dev, "Claim oneshot IRQ failed\n");
-						goto err_pclk;
-					}
-				}
 			}
 		}
 	}

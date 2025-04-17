@@ -491,7 +491,7 @@ void ieee80211_tx_ba_session_handle_start(struct sta_info *sta, int tid)
 {
 	struct tid_ampdu_tx *tid_tx;
 	struct ieee80211_local *local = sta->local;
-	struct ieee80211_sub_if_data *sdata;
+	struct ieee80211_sub_if_data *sdata = sta->sdata;
 	struct ieee80211_ampdu_params params = {
 		.sta = &sta->sta,
 		.action = IEEE80211_AMPDU_TX_START,
@@ -519,7 +519,6 @@ void ieee80211_tx_ba_session_handle_start(struct sta_info *sta, int tid)
 	 */
 	synchronize_net();
 
-	sdata = sta->sdata;
 	params.ssn = sta->tid_seq[tid] >> 4;
 	ret = drv_ampdu_action(local, sdata, &params);
 	tid_tx->ssn = params.ssn;
@@ -533,9 +532,6 @@ void ieee80211_tx_ba_session_handle_start(struct sta_info *sta, int tid)
 		 */
 		set_bit(HT_AGG_STATE_DRV_READY, &tid_tx->state);
 	} else if (ret) {
-		if (!sdata)
-			return;
-
 		ht_dbg(sdata,
 		       "BA request denied - HW unavailable for %pM tid %d\n",
 		       sta->sta.addr, tid);
@@ -553,23 +549,6 @@ void ieee80211_tx_ba_session_handle_start(struct sta_info *sta, int tid)
 
 	ieee80211_send_addba_with_timeout(sta, tid_tx);
 }
-
-void ieee80211_refresh_tx_agg_session_timer(struct ieee80211_sta *pubsta,
-					    u16 tid)
-{
-	struct sta_info *sta = container_of(pubsta, struct sta_info, sta);
-	struct tid_ampdu_tx *tid_tx;
-
-	if (WARN_ON_ONCE(tid >= IEEE80211_NUM_TIDS))
-		return;
-
-	tid_tx = rcu_dereference(sta->ampdu_mlme.tid_tx[tid]);
-	if (!tid_tx)
-		return;
-
-	tid_tx->last_tx = jiffies;
-}
-EXPORT_SYMBOL(ieee80211_refresh_tx_agg_session_timer);
 
 /*
  * After accepting the AddBA Response we activated a timer,

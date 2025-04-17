@@ -63,16 +63,6 @@ struct led_init_data {
 	bool devname_mandatory;
 };
 
-#if IS_ENABLED(CONFIG_NEW_LEDS)
-enum led_default_state led_init_default_state_get(struct fwnode_handle *fwnode);
-#else
-static inline enum led_default_state
-led_init_default_state_get(struct fwnode_handle *fwnode)
-{
-	return LEDS_DEFSTATE_OFF;
-}
-#endif
-
 struct led_hw_trigger_type {
 	int dummy;
 };
@@ -164,49 +154,6 @@ struct led_classdev {
 
 	/* LEDs that have private triggers have this set */
 	struct led_hw_trigger_type	*trigger_type;
-
-	/* Unique trigger name supported by LED set in hw control mode */
-	const char		*hw_control_trigger;
-	/*
-	 * Check if the LED driver supports the requested mode provided by the
-	 * defined supported trigger to setup the LED to hw control mode.
-	 *
-	 * Return 0 on success. Return -EOPNOTSUPP when the passed flags are not
-	 * supported and software fallback needs to be used.
-	 * Return a negative error number on any other case  for check fail due
-	 * to various reason like device not ready or timeouts.
-	 */
-	int			(*hw_control_is_supported)(struct led_classdev *led_cdev,
-							   unsigned long flags);
-	/*
-	 * Activate hardware control, LED driver will use the provided flags
-	 * from the supported trigger and setup the LED to be driven by hardware
-	 * following the requested mode from the trigger flags.
-	 * Deactivate hardware blink control by setting brightness to LED_OFF via
-	 * the brightness_set() callback.
-	 *
-	 * Return 0 on success, a negative error number on flags apply fail.
-	 */
-	int			(*hw_control_set)(struct led_classdev *led_cdev,
-						  unsigned long flags);
-	/*
-	 * Get from the LED driver the current mode that the LED is set in hw
-	 * control mode and put them in flags.
-	 * Trigger can use this to get the initial state of a LED already set in
-	 * hardware blink control.
-	 *
-	 * Return 0 on success, a negative error number on failing parsing the
-	 * initial mode. Error from this function is NOT FATAL as the device
-	 * may be in a not supported initial state by the attached LED trigger.
-	 */
-	int			(*hw_control_get)(struct led_classdev *led_cdev,
-						  unsigned long *flags);
-	/*
-	 * Get the device this LED blinks in response to.
-	 * e.g. for a PHY LED, it is the network device. If the LED is
-	 * not yet associated to a device, return NULL.
-	 */
-	struct device		*(*hw_control_get_device)(struct led_classdev *led_cdev);
 #endif
 
 #ifdef CONFIG_LEDS_BRIGHTNESS_HW_CHANGED
@@ -249,19 +196,9 @@ static inline int led_classdev_register(struct device *parent,
 	return led_classdev_register_ext(parent, led_cdev, NULL);
 }
 
-#if IS_ENABLED(CONFIG_LEDS_CLASS)
 int devm_led_classdev_register_ext(struct device *parent,
 					  struct led_classdev *led_cdev,
 					  struct led_init_data *init_data);
-#else
-static inline int
-devm_led_classdev_register_ext(struct device *parent,
-			       struct led_classdev *led_cdev,
-			       struct led_init_data *init_data)
-{
-	return 0;
-}
-#endif
 
 static inline int devm_led_classdev_register(struct device *parent,
 					     struct led_classdev *led_cdev)
@@ -419,6 +356,9 @@ struct led_trigger {
 	int		(*activate)(struct led_classdev *led_cdev);
 	void		(*deactivate)(struct led_classdev *led_cdev);
 
+	/* Brightness set by led_trigger_event */
+	enum led_brightness brightness;
+
 	/* LED-private triggers have this set */
 	struct led_hw_trigger_type *trigger_type;
 
@@ -472,22 +412,11 @@ static inline void *led_get_trigger_data(struct led_classdev *led_cdev)
 	return led_cdev->trigger_data;
 }
 
-/**
- * led_trigger_rename_static - rename a trigger
- * @name: the new trigger name
- * @trig: the LED trigger to rename
- *
- * Change a LED trigger name by copying the string passed in
- * name into current trigger name, which MUST be large
- * enough for the new string.
- *
- * Note that name must NOT point to the same string used
- * during LED registration, as that could lead to races.
- *
- * This is meant to be used on triggers with statically
- * allocated name.
- */
-void led_trigger_rename_static(const char *name, struct led_trigger *trig);
+static inline enum led_brightness
+led_trigger_get_brightness(const struct led_trigger *trigger)
+{
+	return trigger ? trigger->brightness : LED_OFF;
+}
 
 #define module_led_trigger(__led_trigger) \
 	module_driver(__led_trigger, led_trigger_register, \
@@ -525,25 +454,13 @@ static inline void *led_get_trigger_data(struct led_classdev *led_cdev)
 	return NULL;
 }
 
+static inline enum led_brightness
+led_trigger_get_brightness(const struct led_trigger *trigger)
+{
+	return LED_OFF;
+}
+
 #endif /* CONFIG_LEDS_TRIGGERS */
-
-/* Trigger specific enum */
-enum led_trigger_netdev_modes {
-	TRIGGER_NETDEV_LINK = 0,
-	TRIGGER_NETDEV_LINK_10,
-	TRIGGER_NETDEV_LINK_100,
-	TRIGGER_NETDEV_LINK_1000,
-	TRIGGER_NETDEV_LINK_2500,
-	TRIGGER_NETDEV_LINK_5000,
-	TRIGGER_NETDEV_LINK_10000,
-	TRIGGER_NETDEV_HALF_DUPLEX,
-	TRIGGER_NETDEV_FULL_DUPLEX,
-	TRIGGER_NETDEV_TX,
-	TRIGGER_NETDEV_RX,
-
-	/* Keep last */
-	__TRIGGER_NETDEV_MAX,
-};
 
 /* Trigger specific functions */
 #ifdef CONFIG_LEDS_TRIGGER_DISK

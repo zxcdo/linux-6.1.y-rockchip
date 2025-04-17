@@ -61,7 +61,6 @@
 #include <linux/if_vlan.h>
 #include <linux/mpls.h>
 #include <linux/kcov.h>
-#include <linux/if.h>
 
 #include <net/protocol.h>
 #include <net/dst.h>
@@ -709,22 +708,6 @@ skb_fail:
 	return skb;
 }
 EXPORT_SYMBOL(__napi_alloc_skb);
-
-struct sk_buff *__netdev_alloc_skb_ip_align(struct net_device *dev,
-		unsigned int length, gfp_t gfp)
-{
-	struct sk_buff *skb = __netdev_alloc_skb(dev, length + NET_IP_ALIGN, gfp);
-
-#ifdef CONFIG_ETHERNET_PACKET_MANGLE
-	if (dev && (dev->priv_flags & IFF_NO_IP_ALIGN))
-		return skb;
-#endif
-
-	if (NET_IP_ALIGN && skb)
-		skb_reserve(skb, NET_IP_ALIGN);
-	return skb;
-}
-EXPORT_SYMBOL(__netdev_alloc_skb_ip_align);
 
 void skb_add_rx_frag(struct sk_buff *skb, int i, struct page *page, int off,
 		     int size, unsigned int truesize)
@@ -5808,7 +5791,6 @@ EXPORT_SYMBOL(skb_ensure_writable);
  */
 int __skb_vlan_pop(struct sk_buff *skb, u16 *vlan_tci)
 {
-	struct vlan_hdr *vhdr;
 	int offset = skb->data - skb_mac_header(skb);
 	int err;
 
@@ -5824,13 +5806,8 @@ int __skb_vlan_pop(struct sk_buff *skb, u16 *vlan_tci)
 
 	skb_postpull_rcsum(skb, skb->data + (2 * ETH_ALEN), VLAN_HLEN);
 
-	vhdr = (struct vlan_hdr *)(skb->data + ETH_HLEN);
-	*vlan_tci = ntohs(vhdr->h_vlan_TCI);
+	vlan_remove_tag(skb, vlan_tci);
 
-	memmove(skb->data + VLAN_HLEN, skb->data, 2 * ETH_ALEN);
-	__skb_pull(skb, VLAN_HLEN);
-
-	vlan_set_encap_proto(skb, vhdr);
 	skb->mac_header += VLAN_HLEN;
 
 	if (skb_network_offset(skb) < ETH_HLEN)

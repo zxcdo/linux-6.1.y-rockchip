@@ -1067,4 +1067,3 @@ module_platform_driver(rk3562_can_driver);
 
 MODULE_AUTHOR("Elaine Zhang <zhangqing@rock-chips.com>");
 MODULE_DESCRIPTION("RK3562 CAN Drivers");
-MODULE_LICENSE("GPL");

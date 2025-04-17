@@ -179,18 +179,6 @@ out:
 	return r;
 }
 
-u64 uevent_next_seqnum(void)
-{
-	u64 seq;
-
-	mutex_lock(&uevent_sock_mutex);
-	seq = ++uevent_seqnum;
-	mutex_unlock(&uevent_sock_mutex);
-
-	return seq;
-}
-EXPORT_SYMBOL_GPL(uevent_next_seqnum);
-
 /**
  * kobject_synth_uevent - send synthetic uevent with arguments
  *
@@ -444,8 +432,23 @@ static void zap_modalias_env(struct kobj_uevent_env *env)
 		len = strlen(env->envp[i]) + 1;
 
 		if (i != env->envp_idx - 1) {
+			/* @env->envp[] contains pointers to @env->buf[]
+			 * with @env->buflen chars, and we are removing
+			 * variable MODALIAS here pointed by @env->envp[i]
+			 * with length @len as shown below:
+			 *
+			 * 0               @env->buf[]      @env->buflen
+			 * ---------------------------------------------
+			 * ^             ^              ^              ^
+			 * |             |->   @len   <-| target block |
+			 * @env->envp[0] @env->envp[i]  @env->envp[i + 1]
+			 *
+			 * so the "target block" indicated above is moved
+			 * backward by @len, and its right size is
+			 * @env->buflen - (@env->envp[i + 1] - @env->envp[0]).
+			 */
 			memmove(env->envp[i], env->envp[i + 1],
-				env->buflen - len);
+				env->buflen - (env->envp[i + 1] - env->envp[0]));
 
 			for (j = i; j < env->envp_idx - 1; j++)
 				env->envp[j] = env->envp[j + 1] - len;
@@ -689,43 +692,6 @@ int add_uevent_var(struct kobj_uevent_env *env, const char *format, ...)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(add_uevent_var);
-
-#if defined(CONFIG_NET)
-int broadcast_uevent(struct sk_buff *skb, __u32 pid, __u32 group,
-		     gfp_t allocation)
-{
-	struct uevent_sock *ue_sk;
-	int err = 0;
-
-	/* send netlink message */
-	mutex_lock(&uevent_sock_mutex);
-	list_for_each_entry(ue_sk, &uevent_sock_list, list) {
-		struct sock *uevent_sock = ue_sk->sk;
-		struct sk_buff *skb2;
-
-		skb2 = skb_clone(skb, allocation);
-		if (!skb2)
-			break;
-
-		err = netlink_broadcast(uevent_sock, skb2, pid, group,
-					allocation);
-		if (err)
-			break;
-	}
-	mutex_unlock(&uevent_sock_mutex);
-
-	kfree_skb(skb);
-	return err;
-}
-#else
-int broadcast_uevent(struct sk_buff *skb, __u32 pid, __u32 group,
-		     gfp_t allocation)
-{
-	kfree_skb(skb);
-	return 0;
-}
-#endif
-EXPORT_SYMBOL_GPL(broadcast_uevent);
 
 #if defined(CONFIG_NET)
 static int uevent_net_broadcast(struct sock *usk, struct sk_buff *skb,

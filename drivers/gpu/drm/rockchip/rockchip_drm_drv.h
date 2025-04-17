@@ -31,7 +31,7 @@
 #define ROCKCHIP_MAX_CONNECTOR	2
 #define ROCKCHIP_MAX_CRTC	4
 #define ROCKCHIP_MAX_LAYER	16
-
+#define ROCKCHIP_MAX_DOVI_CORE	3
 
 struct drm_device;
 struct drm_connector;
@@ -60,6 +60,21 @@ struct iommu_domain;
 #define RK_IF_PROP_COLOR_DEPTH_CAPS	"color_depth_caps"
 #define RK_IF_PROP_COLOR_FORMAT_CAPS	"color_format_caps"
 #define RK_IF_PROP_ENCRYPTED		"hdcp_encrypted"
+
+/*
+ * This is extend by rockchip, the other EOTF is defined at hdmi.h
+ *
+ * enum hdmi_eotf {
+ *	HDMI_EOTF_TRADITIONAL_GAMMA_SDR,
+ *	HDMI_EOTF_TRADITIONAL_GAMMA_HDR,
+ *	HDMI_EOTF_SMPTE_ST2084,
+ *	HDMI_EOTF_BT_2100_HLG,
+ *};
+ */
+#define HDMI_EOTF_HDR10PLUS	0x10
+#define HDMI_EOTF_HDRVIVID	0x11
+#define HDMI_EOTF_DOVI		0x12
+#define DOVI_VSDB_LEN		26
 
 enum rockchip_drm_debug_category {
 	VOP_DEBUG_PLANE		= BIT(0),
@@ -158,6 +173,8 @@ struct rockchip_bcsh_state {
 
 struct rockchip_crtc {
 	struct drm_crtc crtc;
+	/* @frme_count: the frame num of commit buf */
+	u32 frame_count;
 #if defined(CONFIG_ROCKCHIP_DRM_DEBUG)
 	/**
 	 * @vop_dump_status the status of vop dump control
@@ -510,6 +527,7 @@ struct rockchip_crtc_funcs {
 	void (*crtc_output_post_enable)(struct drm_crtc *crtc, int intf);
 	void (*crtc_output_pre_disable)(struct drm_crtc *crtc, int intf);
 	int (*crtc_set_color_bar)(struct drm_crtc *crtc, enum rockchip_color_bar_mode mode);
+	unsigned long (*crtc_get_dclk_rate)(struct drm_crtc *crtc);
 	int (*set_aclk)(struct drm_crtc *crtc, enum rockchip_drm_vop_aclk_mode aclk_mode, struct dmcfreq_vop_info *vop_bw_info);
 	int (*get_crc)(struct drm_crtc *crtc);
 	void (*iommu_fault_handler)(struct drm_crtc *crtc, struct iommu_domain *iommu);
@@ -553,6 +571,7 @@ struct rockchip_drm_private {
 	struct drm_property *eotf_prop;
 	struct drm_property *async_commit_prop;
 	struct drm_property *share_id_prop;
+	struct drm_property *dovi_input_type_prop;
 
 	/* private connector prop */
 	struct drm_property *connector_id_prop;
@@ -615,6 +634,10 @@ void rockchip_drm_unregister_sub_dev(struct rockchip_drm_sub_dev *sub_dev);
 struct rockchip_drm_sub_dev *rockchip_drm_get_sub_dev(struct device_node *node);
 int rockchip_drm_add_modes_noedid(struct drm_connector *connector);
 void rockchip_drm_te_handle(struct drm_crtc *crtc);
+struct drm_crtc *rockchip_drm_encoder_get_old_crtc(struct drm_encoder *encoder,
+						   struct drm_atomic_state *state);
+struct drm_crtc *rockchip_drm_encoder_get_new_crtc(struct drm_encoder *encoder,
+						   struct drm_atomic_state *state);
 void drm_mode_convert_to_split_mode(struct drm_display_mode *mode);
 void drm_mode_convert_to_origin_mode(struct drm_display_mode *mode);
 const char *rockchip_drm_get_color_encoding_name(enum drm_color_encoding encoding);
@@ -644,8 +667,7 @@ int rockchip_drm_get_yuv422_format(struct drm_connector *connector,
 int rockchip_drm_parse_cea_ext(struct rockchip_drm_dsc_cap *dsc_cap,
 			       u8 *max_frl_rate_per_lane, u8 *max_lanes, u8 *add_func,
 			       const struct edid *edid);
-int rockchip_drm_parse_next_hdr(struct next_hdr_sink_data *sink_data,
-				const struct edid *edid);
+int rockchip_drm_parse_dovi(u8 *sink_data, const struct edid *edid);
 int rockchip_drm_parse_colorimetry_data_block(u8 *colorimetry, const struct edid *edid);
 struct dma_buf *rockchip_drm_gem_prime_export(struct drm_gem_object *obj, int flags);
 long rockchip_drm_dclk_round_rate(u32 version, struct clk *dclk, unsigned long rate);

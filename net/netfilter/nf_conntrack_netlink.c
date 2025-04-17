@@ -381,7 +381,7 @@ nla_put_failure:
 #define ctnetlink_dump_secctx(a, b) (0)
 #endif
 
-#ifdef CONFIG_NF_CONNTRACK_LABELS
+#ifdef CONFIG_NF_CONNTRACK_EVENTS
 static inline int ctnetlink_label_size(const struct nf_conn *ct)
 {
 	struct nf_conn_labels *labels = nf_ct_labels_find(ct);
@@ -390,6 +390,7 @@ static inline int ctnetlink_label_size(const struct nf_conn *ct)
 		return 0;
 	return nla_total_size(sizeof(labels->bits));
 }
+#endif
 
 static int
 ctnetlink_dump_labels(struct sk_buff *skb, const struct nf_conn *ct)
@@ -410,10 +411,6 @@ ctnetlink_dump_labels(struct sk_buff *skb, const struct nf_conn *ct)
 
 	return 0;
 }
-#else
-#define ctnetlink_dump_labels(a, b) (0)
-#define ctnetlink_label_size(a)	(0)
-#endif
 
 #define master_tuple(ct) &(ct->master->tuplehash[IP_CT_DIR_ORIGINAL].tuple)
 
@@ -723,19 +720,12 @@ static size_t ctnetlink_nlmsg_size(const struct nf_conn *ct)
 }
 
 static int
-#ifdef CONFIG_NF_CONNTRACK_CHAIN_EVENTS
-ctnetlink_conntrack_event(struct notifier_block *this, unsigned long events, void *ptr)
-#else
 ctnetlink_conntrack_event(unsigned int events, const struct nf_ct_event *item)
-#endif
 {
 	const struct nf_conntrack_zone *zone;
 	struct net *net;
 	struct nlmsghdr *nlh;
 	struct nlattr *nest_parms;
-#ifdef CONFIG_NF_CONNTRACK_CHAIN_EVENTS
-	struct nf_ct_event *item = (struct nf_ct_event *)ptr;
-#endif
 	struct nf_conn *ct = item->ct;
 	struct sk_buff *skb;
 	unsigned int type;
@@ -3422,7 +3412,8 @@ static int ctnetlink_del_expect(struct sk_buff *skb,
 
 		if (cda[CTA_EXPECT_ID]) {
 			__be32 id = nla_get_be32(cda[CTA_EXPECT_ID]);
-			if (ntohl(id) != (u32)(unsigned long)exp) {
+
+			if (id != nf_expect_get_id(exp)) {
 				nf_ct_expect_put(exp);
 				return -ENOENT;
 			}
@@ -3761,16 +3752,10 @@ static int ctnetlink_stat_exp_cpu(struct sk_buff *skb,
 }
 
 #ifdef CONFIG_NF_CONNTRACK_EVENTS
-#ifdef CONFIG_NF_CONNTRACK_CHAIN_EVENTS
-static struct notifier_block ctnl_notifier = {
-	.notifier_call = ctnetlink_conntrack_event
-};
-#else
 static struct nf_ct_event_notifier ctnl_notifier = {
 	.ct_event = ctnetlink_conntrack_event,
 	.exp_event = ctnetlink_expect_event,
 };
-#endif
 #endif
 
 static const struct nfnl_callback ctnl_cb[IPCTNL_MSG_MAX] = {
@@ -3870,11 +3855,7 @@ static int __net_init ctnetlink_net_init(struct net *net)
 static void ctnetlink_net_pre_exit(struct net *net)
 {
 #ifdef CONFIG_NF_CONNTRACK_EVENTS
-#ifdef CONFIG_NF_CONNTRACK_CHAIN_EVENTS
-	nf_conntrack_unregister_notifier(net,&ctnl_notifier);
-#else
 	nf_conntrack_unregister_notifier(net);
-#endif
 #endif
 }
 

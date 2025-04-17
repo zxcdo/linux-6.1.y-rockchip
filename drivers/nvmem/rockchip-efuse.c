@@ -2,7 +2,7 @@
 /*
  * Rockchip eFuse Driver
  *
- * Copyright (c) 2015 Rockchip Electronics Co. Ltd.
+ * Copyright (c) 2015 Rockchip Electronics Co., Ltd.
  * Author: Caesar Wang <wxt@rock-chips.com>
  */
 
@@ -484,7 +484,6 @@ disable_clks:
 
 static struct nvmem_config econfig = {
 	.name = "rockchip-efuse",
-	.add_legacy_fixed_of_cells = true,
 	.stride = 1,
 	.word_size = 1,
 	.read_only = true,
