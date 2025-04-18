@@ -392,6 +392,25 @@
 &i2c0 {
 	status = "okay";
 
+	vdd_cpu: tcs4525@1c {
+		compatible = "tcs,tcs4525";
+		reg = <0x1c>;
+		vin-supply = <&vcc3v8_sys>;
+		regulator-compatible = "fan53555-reg";
+		regulator-name = "vdd_cpu";
+		regulator-min-microvolt = <712500>;
+		regulator-max-microvolt = <1390000>;
+		regulator-init-microvolt = <900000>;
+		regulator-ramp-delay = <2300>;
+		fcs,suspend-voltage-selector = <1>;
+		regulator-boot-on;
+		regulator-always-on;
+		regulator-state-mem {
+			regulator-off-in-suspend;
+		};
+	};
+
+	/*
 	vdd_cpu: rk8600@40 {
 		compatible = "rockchip,rk8600";
 		reg = <0x40>;
@@ -409,6 +428,7 @@
 			regulator-off-in-suspend;
 		};
 	};
+	*/
 
 	rk809: pmic@20 {
 		compatible = "rockchip,rk809";
