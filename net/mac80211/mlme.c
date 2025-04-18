@@ -4773,7 +4773,8 @@ static int ieee80211_prep_channel(struct ieee80211_sub_if_data *sdata,
 	have_80mhz = false;
 	for (i = 0; i < sband->n_channels; i++) {
 		if (sband->channels[i].flags & (IEEE80211_CHAN_DISABLED |
-						IEEE80211_CHAN_NO_80MHZ))
+						IEEE80211_CHAN_NO_80MHZ) &
+						(sband->band != NL80211_BAND_2GHZ))
 			continue;
 
 		have_80mhz = true;
