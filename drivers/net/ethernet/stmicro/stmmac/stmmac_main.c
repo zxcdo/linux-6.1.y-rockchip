@@ -152,6 +152,13 @@ static void stmmac_exit_fs(struct net_device *dev);
 #define RTL_8211E_PHY_ID  0x001cc915
 #define RTL_8211F_PHY_ID  0x001cc916
 #define DP_83848_PHY_ID   0x20005c90
+
+#define RK631_PHY_ID	0x4f51e91b
+#define RK631_PHY_ID_MASK	0x4fffffff
+#define RK631_EXTENDED_REGISTER_ADDRESS_OFFSET	0x1e
+#define RK631_EXTENDED_REGISTER_DATA	0x1f
+#define RK631_LED1_CFG	0xa00d
+#define RK631_LED2_CFG	0xa00e
 #endif
 
 int stmmac_bus_clks_config(struct stmmac_priv *priv, bool enabled)
@@ -7217,6 +7224,18 @@ static int phy_rtl8211f_led_fixup(struct phy_device *phydev)
 
 	return 0;
 }
+
+static int phy_rk631_led_fixup(struct phy_device *phydev)
+{
+	/* Set LED1(Green) Link 10/100/1000M + Active, and set LED2(Yellow) Link 10/100/1000M */
+	phy_write(phydev, RK631_EXTENDED_REGISTER_ADDRESS_OFFSET, RK631_LED2_CFG);
+	phy_write(phydev, RK631_EXTENDED_REGISTER_DATA, 0xc070);
+
+	phy_write(phydev, RK631_EXTENDED_REGISTER_ADDRESS_OFFSET, RK631_LED1_CFG);
+	phy_write(phydev, RK631_EXTENDED_REGISTER_DATA, 0xc607);
+
+	return 0;
+}
 #endif
 
 /**
@@ -7507,6 +7526,9 @@ ret = phy_register_fixup_for_uid(RTL_8201F_PHY_ID, 0xffffffff, phy_rtl8201f_led_
 if (ret)
 	pr_warn("Cannot register PHY board fixup.\n");
 ret = phy_register_fixup_for_uid(DP_83848_PHY_ID, 0xffffffff, phy_dp83848_led_fixup);
+if (ret)
+	pr_warn("Cannot register PHY board fixup.\n");
+ret = phy_register_fixup_for_uid(RK631_PHY_ID, RK631_PHY_ID_MASK, phy_rk631_led_fixup);
 if (ret)
 	pr_warn("Cannot register PHY board fixup.\n");
 #endif
