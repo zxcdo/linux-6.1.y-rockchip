@@ -378,7 +378,6 @@
 &rockchip_suspend {
 	status = "okay";
 	rockchip,sleep-debug-en = <1>;
-	rockchip,virtual-poweroff = <1>;
 	rockchip,sleep-mode-config = <
 		(0
 		| RKPM_SLP_ARMPD
@@ -486,7 +485,8 @@
 			&rgmii_tx_bus2
 			&rgmii_rx_bus2
 			&rgmii_rgmii_clk
-			&rgmii_rgmii_bus>;
+			&rgmii_rgmii_bus
+			&eth_pins>;
 
 	tx_delay = <0x3f>;
 	//rx_delay = <0x20>;
@@ -596,7 +596,7 @@
 				regulator-boot-on;
 				regulator-always-on;
 				regulator-state-mem {
-					regulator-off-in-suspend;
+					regulator-on-in-suspend;
 				};
 			};
 
