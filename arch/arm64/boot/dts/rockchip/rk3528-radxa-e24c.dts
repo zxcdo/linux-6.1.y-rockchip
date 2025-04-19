@@ -14,30 +14,99 @@
 #include <dt-bindings/thermal/thermal.h>
 #include "dt-bindings/usb/pd.h"
 #include "rk3528.dtsi"
-#include "rk3528-linux.dtsi"
 
 / {
 	model = "Radxa E24C";
 	compatible = "radxa,e24c", "radxa,rock-2", "rockchip,rk3528a";
 
-	/delete-node/ chosen;
+	chosen: chosen {
+		bootargs = "earlycon=uart8250,mmio32,0xff9f0000 console=ttyFIQ0:1500000";
+	};
+
+	gmac1_clkin: external-gmac1-clock {
+		compatible = "fixed-clock";
+		clock-frequency = <125000000>;
+		clock-output-names = "gmac1_clkin";
+		#clock-cells = <0>;
+	};
 
 	aliases {
+		ethernet0 = &gmac1;
 		mmc0 = &sdmmc;
 		mmc1 = &sdhci;
 		mmc2 = &sdio0;
+		rtc0 = &hym8563;
+		rtc99 = &rk805_rtc;
 	};
 
-	vcc5v0_sys: vcc5v0-sys {
+	fiq_debugger: fiq-debugger {
+		compatible = "rockchip,fiq-debugger";
+		rockchip,serial-id = <0>;
+		rockchip,wake-irq = <0>;
+		/* If enable uart uses irq instead of fiq */
+		rockchip,irq-mode-enable = <1>;
+		rockchip,baudrate = <1500000>;  /* Only 115200 and 1500000 */
+		interrupts = <GIC_SPI 186 IRQ_TYPE_LEVEL_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&uart0m0_xfer>;
+		status = "okay";
+	};
+
+	firmware: firmware {
+		optee {
+			compatible = "linaro,optee-tz";
+			method = "smc";
+		};
+	};
+
+	reserved_memory: reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		drm_logo: drm-logo@0 {
+			compatible = "rockchip,drm-logo";
+			reg = <0x0 0x0 0x0 0x0>;
+		};
+
+		drm_cubic_lut: drm-cubic-lut@0 {
+			compatible = "rockchip,drm-cubic-lut";
+			reg = <0x0 0x0 0x0 0x0>;
+		};
+
+		ramoops: ramoops@110000 {
+			compatible = "ramoops";
+			/* 0x110000 to 0x1f0000 is for ramoops */
+			reg = <0x0 0x110000 0x0 0xe0000>;
+			boot-log-size = <0x8000>;	/* do not change */
+			boot-log-count = <0x1>;		/* do not change */
+			console-size = <0x80000>;
+			pmsg-size = <0x30000>;
+			ftrace-size = <0x00000>;
+			record-size = <0x14000>;
+		};
+	};
+
+	dc12v_in: regulator-dc12v-in {
+		compatible = "regulator-fixed";
+		regulator-name = "dc12v-in";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+	};
+
+	vcc5v0_sys: regulator-vcc5v0-sys {
 		compatible = "regulator-fixed";
 		regulator-name = "vcc5v0_sys";
 		regulator-always-on;
 		regulator-boot-on;
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
+		vin-supply = <&dc12v_in>;
 	};
 
-	vcc5v0_host: vcc5v0-host-regulator {
+	vcc5v0_host: regulator-vcc5v0-host {
 		compatible = "regulator-fixed";
 		regulator-name = "vcc5v0_host";
 		regulator-boot-on;
@@ -45,10 +114,10 @@
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
 		enable-active-high;
-		gpio = <&gpio1 RK_PA3 GPIO_ACTIVE_HIGH>;
-		vin-supply = <&vcc5v0_sys>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&vcc5v0_host_en>;
+		gpio = <&gpio1 RK_PA3 GPIO_ACTIVE_HIGH>;
+		vin-supply = <&vcc5v0_sys>;
 	};
 
 	vccio_sd: vccio-sd {
@@ -56,6 +125,8 @@
 		regulator-name = "vccio_sd";
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <3300000>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&vccio_sd_en>;
 		gpios = <&gpio4 RK_PB6 GPIO_ACTIVE_HIGH>;
 		vin-supply = <&vcc5v0_sys>;
 		states = <1800000 0x0
@@ -81,17 +152,24 @@
 		vin-supply = <&vcc5v0_sys>;
 	};
 
-	rtl8367rb_power: rtl8367rb-power-regulator {
+	/*
+	 * DC-DC: SY8088AAC(3v3) + SY8088AAC(1v1), max 1A
+	 * input: vcc_5v0
+	 * output: 3v3 to RTL8367RB AVDDH, 1v1 to RTL8367RB AVDDL
+	 * enabled by GPIO1_C3
+	 */
+	vcc3v3_switch: regulator-vcc3v3-switch {
 		compatible = "regulator-fixed";
-		regulator-name = "rtl8367rb_power";
-		regulator-min-microvolt = <5000000>;
-		regulator-max-microvolt = <5000000>;
-		enable-active-high;
+		regulator-name = "vcc3v3_switch";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
 		regulator-boot-on;
 		regulator-always-on;
+		enable-active-high;
 		gpio = <&gpio1 RK_PC3 GPIO_ACTIVE_HIGH>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&rtl8367rb_power_en>;
+		vin-supply = <&vcc5v0_sys>;
 	};
 
 	hdmi_sound: hdmi-sound {
@@ -108,14 +186,14 @@
 		};
 	};
 
-	gpio-keys {
+	gpio_keys: gpio-keys {
 		compatible = "gpio-keys";
 		pinctrl-names = "default";
 		pinctrl-0 = <&user_key>;
 		autorepeat;
 
 		user-key {
-			label = "Reset button";
+			label = "Reset Button";
 			linux,code = <KEY_RESTART>;
 			gpios = <&gpio0 RK_PA0 GPIO_ACTIVE_LOW>;
 			debounce-interval = <100>;
@@ -175,14 +253,6 @@
 	};
 };
 
-&pwm1 {
-	status = "okay";
-};
-
-&pwm2 {
-	status = "okay";
-};
-
 &cpu0 {
 	cpu-supply = <&vdd_cpu>;
 };
@@ -211,7 +281,30 @@
 };
 
 &display_subsystem {
+	memory-region = <&drm_logo>, <&drm_cubic_lut>;
+	memory-region-names = "drm-logo", "drm-cubic-lut";
+	/* devfreq = <&dmc>; */
 	status = "okay";
+
+	route {
+		route_hdmi: route-hdmi {
+			status = "okay";
+			logo,uboot = "logo.bmp";
+			logo,kernel = "logo_kernel.bmp";
+			logo,mode = "center";
+			charge_logo,mode = "center";
+			connect = <&vp0_out_hdmi>;
+		};
+
+		route_tve: route-tve {
+			status = "okay";
+			logo,uboot = "logo.bmp";
+			logo,kernel = "logo_kernel.bmp";
+			logo,mode = "center";
+			charge_logo,mode = "center";
+			connect = <&vp1_out_tve>;
+		};
+	};
 };
 
 &hdmi {
@@ -285,6 +378,7 @@
 &rockchip_suspend {
 	status = "okay";
 	rockchip,sleep-debug-en = <1>;
+	rockchip,virtual-poweroff = <1>;
 	rockchip,sleep-mode-config = <
 		(0
 		| RKPM_SLP_ARMPD
@@ -339,7 +433,7 @@
 };
 
 &sai2 {
-	status = "okay";
+	status = "disabled";
 };
 
 &sai3 {
@@ -378,8 +472,9 @@
 
 &gmac1 {
 	status = "okay";
-	phy-mode = "rgmii";
+	phy-mode = "rgmii-rxid";
 	clock_in_out = "output";
+	label = "eth0";
 
 	snps,reset-gpio = <&gpio4 RK_PC2 GPIO_ACTIVE_LOW>;
 	snps,reset-active-low;
@@ -393,8 +488,8 @@
 			&rgmii_rgmii_clk
 			&rgmii_rgmii_bus>;
 
-	tx_delay = <0>;
-	rx_delay = <0>;
+	tx_delay = <0x3f>;
+	//rx_delay = <0x20>;
 
 	fixed-link {
 		speed = <1000>;
@@ -450,12 +545,14 @@
 	status = "okay";
 };
 
+/* PMIC */
 &i2c0 {
+        pinctrl-names = "default";
+        pinctrl-0 = <&i2c0m0_xfer>;
 	status = "okay";
 
 	rk805: rk805@18 {
 		compatible = "rockchip,rk805";
-		status = "okay";
 		reg = <0x18>;
 		interrupt-parent = <&gpio4>;
 		interrupts = <RK_PB2 IRQ_TYPE_LEVEL_LOW>;
@@ -466,6 +563,7 @@
 		#gpio-cells = <2>;
 		#clock-cells = <1>;
 		clock-output-names = "rk805-clkout1", "rk805-clkout2";
+		status = "okay";
 		rockchip,system-power-controller;
 
 		vcc1-supply = <&vcc5v0_sys>;
@@ -475,16 +573,16 @@
 		vcc5-supply = <&vcc5v0_sys>;
 		vcc6-supply = <&vcc5v0_sys>;
 
-		rtc {
-			status = "disabled";
-		};
-
 		pwrkey {
 			status = "okay";
 		};
 
+		rk805_rtc: rtc {
+			status = "okay";
+		};
+
 		gpio {
-			status = "disabled";
+			status = "okay";
 		};
 
 		regulators {
@@ -498,7 +596,7 @@
 				regulator-boot-on;
 				regulator-always-on;
 				regulator-state-mem {
-					regulator-on-in-suspend;
+					regulator-off-in-suspend;
 				};
 			};
 
@@ -582,10 +680,11 @@
 	};
 };
 
+/* EEPROM */
 &i2c1 {
-	status = "okay";
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c1m0_xfer>;
+	status = "okay";
 
 	eeprom:	bl24c16@50 {
 		status = "okay";
@@ -595,16 +694,17 @@
 	};
 };
 
+/* LCD (option) */
 &i2c2 {
-	status = "okay";
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c2m1_xfer>;
+	status = "disabled";
 };
 
 &i2c5 {
-	status = "okay";
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c5m0_xfer>;
+	status = "okay";
 
 	hym8563: hym8563@51 {
 		compatible = "haoyu,hym8563";
@@ -617,26 +717,6 @@
 		interrupt-parent = <&gpio4>;
 		interrupts = <RK_PB0 IRQ_TYPE_LEVEL_LOW>;
 		wakeup-source;
-	};
-};
-
-&threshold {
-	temperature = <50000>;
-};
-
-&soc_thermal {
-	sustainable-power = <5000>; /* milliwatts */
-	cooling-maps {
-		map2 {
-			trip = <&target>;
-			cooling-device = <&pwm_fan THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
-			contribution = <8192>;
-		};
-		map3 {
-			trip = <&threshold>;
-			cooling-device = <&pwm_fan THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
-			contribution = <8192>;
-		};
 	};
 };
 
@@ -653,12 +733,10 @@
 			rockchip,pins =
 				<1 RK_PA3 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
-	};
 
-	wifi-bt {
-		vcc_wifibt_en: vcc-wifibt-en {
+		vccio_sd_en: vccio-sd-en {
 			rockchip,pins =
-				<4 RK_PA4 RK_FUNC_GPIO &pcfg_pull_none>;
+				<4 RK_PB6 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 
@@ -690,6 +768,35 @@
 				<2 RK_PA5 1 &pcfg_pull_up_drv_level_3>;
 		};
 	};
+};
+
+/* PWM FAN */
+&pwm2 {
+	status = "okay";
+};
+
+&rng {
+	status = "okay";
+};
+
+&soc_thermal {
+	sustainable-power = <5000>; /* milliwatts */
+	cooling-maps {
+		map2 {
+			trip = <&target>;
+			cooling-device = <&pwm_fan THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+			contribution = <8192>;
+		};
+		map3 {
+			trip = <&threshold>;
+			cooling-device = <&pwm_fan THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+			contribution = <8192>;
+		};
+	};
+};
+
+&threshold {
+	temperature = <50000>;
 };
 
 &gpio0 {
