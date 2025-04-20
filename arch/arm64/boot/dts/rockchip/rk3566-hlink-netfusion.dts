@@ -1082,8 +1082,7 @@
 	max-frequency = <200000000>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&emmc_bus8 &emmc_clk &emmc_cmd &emmc_datastrobe>;
-        mmc-hs400-1_8v;
-        mmc-hs400-enhanced-strobe;
+        mmc-hs200-1_8v;
 	full-pwr-cycle-in-suspend;
 	status = "okay";
 };
