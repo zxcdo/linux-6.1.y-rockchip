@@ -16,6 +16,7 @@
 #include <linux/delay.h>
 #include <linux/vmalloc.h>
 #include <linux/firmware.h>
+#include <linux/string.h>
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 12, 0)
 #include <linux/hardirq.h>
@@ -1364,7 +1365,8 @@ int aicbt_patch_info_unpack(struct aicbt_patch_info_t *patch_info, struct aicbt_
         patch_info->info_len = head_t->len;
         if(patch_info->info_len == 0)
             return 0;
-        memcpy(&patch_info->adid_addrinf, head_t->data, patch_info->info_len * sizeof(uint32_t) * 2);
+        unsafe_memcpy(&patch_info->adid_addrinf, head_t->data,
+			patch_info->info_len * sizeof(uint32_t) * 2, /* justification */);
     }
     return 0;
 }

@@ -510,8 +510,7 @@ static const int rwnx_hwq2uapsd[NL80211_NUM_ACS] = {
 
 
 extern uint8_t scanning;
-//int aicwf_dbg_level = LOGERROR|LOGINFO|LOGDEBUG|LOGTRACE;
-int aicwf_dbg_level = LOGERROR;
+int aicwf_dbg_level = LOGWAKELOCK;
 module_param(aicwf_dbg_level, int, 0660);
 int testmode = 0;
 char aic_fw_path[200];
@@ -2998,7 +2997,7 @@ static struct rwnx_vif *rwnx_interface_add(struct rwnx_hw *rwnx_hw,
 		vif->ap.generation = 0;
 		vif->ap.mesh_pm = NL80211_MESH_POWER_ACTIVE;
 		vif->ap.next_mesh_pm = NL80211_MESH_POWER_ACTIVE;
-		// no break
+		fallthrough;
 	case NL80211_IFTYPE_AP:
 		INIT_LIST_HEAD(&vif->ap.sta_list);
 		memset(&vif->ap.bcn, 0, sizeof(vif->ap.bcn));
@@ -3415,7 +3414,7 @@ static int rwnx_cfg80211_change_iface(struct wiphy *wiphy,
 		INIT_LIST_HEAD(&vif->ap.proxy_list);
 		vif->ap.create_path = false;
 		vif->ap.generation = 0;
-		// no break
+		fallthrough;
 	case NL80211_IFTYPE_AP:
 	case NL80211_IFTYPE_P2P_GO:
 		INIT_LIST_HEAD(&vif->ap.sta_list);
@@ -5334,6 +5333,7 @@ static int rwnx_cfg80211_mgmt_tx(struct wiphy *wiphy, struct wireless_dev *wdev,
 	switch (RWNX_VIF_TYPE(rwnx_vif)) {
 	case NL80211_IFTYPE_AP_VLAN:
 		rwnx_vif = rwnx_vif->ap_vlan.master;
+		fallthrough;
 	case NL80211_IFTYPE_AP:
 	case NL80211_IFTYPE_P2P_GO:
 	case NL80211_IFTYPE_MESH_POINT:
@@ -5646,7 +5646,7 @@ rwnx_cfg80211_tdls_mgmt(struct wiphy *wiphy,
 			printk("%s: only one TDLS link is supported!\n", __func__);
 			status_code = WLAN_STATUS_REQUEST_DECLINED;
 		}
-		/* fall-through */
+		fallthrough;
 	case WLAN_TDLS_SETUP_REQUEST:
 	case WLAN_TDLS_TEARDOWN:
 	case WLAN_TDLS_DISCOVERY_REQUEST:
@@ -5966,6 +5966,7 @@ static int rwnx_fill_station_info(struct rwnx_sta *sta, struct rwnx_vif *vif,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0)
 	case FORMATMOD_HE_MU:
 		sinfo->rxrate.he_ru_alloc = rx_vect1->he.ru_size;
+		fallthrough;
 	case FORMATMOD_HE_SU:
 	case FORMATMOD_HE_ER:
 		sinfo->rxrate.flags = RATE_INFO_FLAGS_HE_MCS;
