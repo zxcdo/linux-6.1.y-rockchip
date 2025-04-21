@@ -8,6 +8,7 @@
 #ifdef CONFIG_USE_FW_REQUEST
 #include <linux/firmware.h>
 #endif
+#include <linux/string.h>
 
 //Parser state
 #define INIT 0
@@ -1228,6 +1229,8 @@ int aicbt_patch_info_unpack(struct aicbt_patch_info_t *patch_info, struct aicbt_
         if(patch_info->info_len == 0)
             return 0;
         memcpy(&patch_info->adid_addrinf, head_t->data, patch_info->info_len * sizeof(uint32_t) * 2);
+        unsafe_memcpy(&patch_info->adid_addrinf, head_t->data,
+                      patch_info->info_len * sizeof(uint32_t) * 2, /* justification */);
     }
     return 0;
 }
