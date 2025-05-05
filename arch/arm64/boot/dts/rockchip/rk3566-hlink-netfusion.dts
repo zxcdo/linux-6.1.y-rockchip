@@ -137,6 +137,7 @@
 		simple-audio-card,bitclock-master = <&dailink0_master>;
 		simple-audio-card,frame-master = <&dailink0_master>;
 		status = "okay";
+
 		simple-audio-card,cpu {
 			sound-dai = <&i2s1_8ch>;
 		};
@@ -773,7 +774,10 @@
 
 &i2s1_8ch {
 	rockchip,capture-only;
+	rockchip,capture-channels = <2>;
 	rockchip,i2s-rx-wait-time-ms = <50>;
+	rockchip,i2s-rx-route = <3 2 1 0>;
+	rockchip,clk-trcm = <2>;
 	status = "okay";
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2s1m0_sclktx
@@ -1301,10 +1305,11 @@
 /* The end of USB3.0 HOST */
 
 &vad {
-	rockchip,audio-src = <&i2s1_8ch>;
 	rockchip,buffer-time-ms = <128>;
-	rockchip,det-channel = <0>;
+	rockchip,audio-src = <&i2s1_8ch>;
+	rockchip,det-channel = <3>;
 	rockchip,mode = <0>;
+	status = "disabled";
 };
 
 &vdpu {
