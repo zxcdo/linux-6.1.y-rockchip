@@ -578,7 +578,7 @@
 		};
 
 		rk805_rtc: rtc {
-			status = "okay";
+			status = "disabled";
 		};
 
 		gpio {
