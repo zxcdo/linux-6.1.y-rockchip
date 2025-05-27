@@ -21,6 +21,7 @@
 #include <linux/platform_device.h>
 #include <linux/tee_drv.h>
 #include <linux/uuid.h>
+#include <linux/version.h>
 
 static DEFINE_MUTEX(nvmem_mutex);
 
@@ -98,8 +99,12 @@ int rockchip_read_oem_non_protected_otp(unsigned int byte_off,
 
 	/* Alloc share memory */
 	shm_size = byte_len;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,18,0)
+	device_shm = tee_shm_alloc_kernel_buf(ctx, shm_size);
+#else
 	device_shm = tee_shm_alloc(ctx, shm_size,
 				   TEE_SHM_MAPPED | TEE_SHM_DMA_BUF);
+#endif
 	if (IS_ERR(device_shm)) {
 		pr_err("tee_shm_alloc failed\n");
 		rc = PTR_ERR(device_shm);
@@ -201,8 +206,12 @@ int rockchip_write_oem_non_protected_otp(unsigned int byte_off,
 
 	/* Alloc share memory */
 	shm_size = byte_len;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,18,0)
+	device_shm = tee_shm_alloc_kernel_buf(ctx, shm_size);
+#else
 	device_shm = tee_shm_alloc(ctx, shm_size,
 				   TEE_SHM_MAPPED | TEE_SHM_DMA_BUF);
+#endif
 	if (IS_ERR(device_shm)) {
 		pr_err("tee_shm_alloc failed\n");
 		rc = PTR_ERR(device_shm);
