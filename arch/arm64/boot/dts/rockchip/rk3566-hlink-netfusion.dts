@@ -139,7 +139,7 @@
 		status = "okay";
 
 		simple-audio-card,cpu {
-			sound-dai = <&i2s1_8ch>;
+			sound-dai = <&i2s3_2ch>;
 		};
 
 		dailink0_master: simple-audio-card,codec {
@@ -352,7 +352,7 @@
 	tx_delay = <0x4e>;
 	rx_delay = <0x2d>;
 
-	snps,reset-gpio = <&gpio4 RK_PC2 GPIO_ACTIVE_LOW>;
+	snps,reset-gpio = <&gpio1 RK_PA3 GPIO_ACTIVE_LOW>;
 	snps,reset-active-low;
 	/* Reset time is 20ms, 100ms for rtl8211f */
 	snps,reset-delays-us = <0 20000 100000>;
@@ -365,8 +365,8 @@
 	rgmii_phy1: phy@1 {
 		compatible = "ethernet-phy-ieee802.3-c22";
 		reg = <0x1>;
-		interrupt-parent = <&gpio4>;
-		interrupts = <RK_PC3 IRQ_TYPE_LEVEL_LOW>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <RK_PA5 IRQ_TYPE_LEVEL_LOW>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&gmac_int>;
 	};
@@ -454,26 +454,6 @@
 			regulator-off-in-suspend;
 		};
 	};
-
-	/*
-	vdd_cpu: rk8600@40 {
-		compatible = "rockchip,rk8600";
-		reg = <0x40>;
-		vin-supply = <&vcc3v8_sys>;
-		regulator-compatible = "rk860x-reg";
-		regulator-name = "vdd_cpu";
-		regulator-min-microvolt = <712500>;
-		regulator-max-microvolt = <1390000>;
-		regulator-init-microvolt = <900000>;
-		regulator-ramp-delay = <2300>;
-		rockchip,suspend-voltage-selector = <1>;
-		regulator-boot-on;
-		regulator-always-on;
-		regulator-state-mem {
-			regulator-off-in-suspend;
-		};
-	};
-	*/
 
 	rk809: pmic@20 {
 		compatible = "rockchip,rk809";
@@ -723,7 +703,7 @@
 		};
 
 		rk808_rtc: rtc {
-			status = "okay";
+			status = "disabled";
 		};
 	};
 };
@@ -751,7 +731,7 @@
 		enable-gpios = <&gpio0 RK_PC7 GPIO_ACTIVE_HIGH>;
 		reset-gpios = <&gpio1 RK_PB1 GPIO_ACTIVE_LOW>;
 		/* temporary used */
-		plugin-det-gpios = <&gpio1 RK_PA6 GPIO_ACTIVE_LOW>;
+		plugin-det-gpios = <&gpio0 RK_PC4 GPIO_ACTIVE_LOW>;
 
 		pinctrl-names = "default";
 		pinctrl-0 = <&rk628_int_h>;
@@ -781,17 +761,17 @@
 	status = "okay";
 };
 
-&i2s1_8ch {
+&i2s3_2ch {
 	rockchip,capture-only;
-	rockchip,capture-channels = <2>;
+	//rockchip,capture-channels = <2>;
 	rockchip,i2s-rx-wait-time-ms = <50>;
-	rockchip,i2s-rx-route = <3 2 1 0>;
+	//rockchip,i2s-rx-route = <3 2 1 0>;
 	rockchip,clk-trcm = <2>;
 	status = "okay";
 	pinctrl-names = "default";
-	pinctrl-0 = <&i2s1m0_sclktx
-		     &i2s1m0_lrcktx
-		     &i2s1m0_sdi3>;
+	pinctrl-0 = <&i2s3m1_sclk
+		     &i2s3m1_lrck
+		     &i2s3m1_sdi>;
 };
 
 &iep {
@@ -821,7 +801,7 @@
  */
 &pcie2x1 {
 	num-viewport = <4>;
-	reset-gpios = <&gpio4 RK_PC6 GPIO_ACTIVE_HIGH>;
+	reset-gpios = <&gpio1 RK_PA2 GPIO_ACTIVE_HIGH>;
 	vpcie3v3 = <&vcc3v3_sys>;
 	status = "okay";
 
@@ -900,7 +880,7 @@
 
 	gmac {
 		gmac_int: gmac-int {
-			rockchip,pins = <4 RK_PC3 RK_FUNC_GPIO &pcfg_pull_none>;
+			rockchip,pins = <1 RK_PA5 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 
@@ -1233,7 +1213,7 @@
 
 /* RS485 IO Port */
 &uart4 {
-	status = "disabled";
+	status = "okay";
 };
 
 /* USB2.0 Host
