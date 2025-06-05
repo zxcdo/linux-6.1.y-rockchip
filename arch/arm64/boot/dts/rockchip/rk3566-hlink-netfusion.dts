@@ -892,7 +892,7 @@
 
 	modem {
 		modem_reset_l: modem-reset-l {
-			rockchip,pins = <3 RK_PC1 RK_FUNC_GPIO &pcfg_pull_none>;
+			rockchip,pins = <3 RK_PC1 RK_FUNC_GPIO &pcfg_pull_up>;
 		};
 	};
 
@@ -1181,6 +1181,11 @@
 };
 
 &tsadc {
+	status = "okay";
+};
+
+/* RS232 */
+&uart0 {
 	status = "okay";
 };
 
