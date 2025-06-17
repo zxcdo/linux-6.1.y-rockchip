@@ -25,11 +25,60 @@
 
 	/delete-node/ chosen;
 
+	aliases {
+		mmc0 = &sdmmc;
+		mmc1 = &sdhci;
+		rtc0 = &hym8563;
+	};
+
 	fan0: pwm-fan {
 		compatible = "pwm-fan";
 		#cooling-cells = <2>;
 		cooling-levels = <0 64 128 192 255>;
 		pwms = <&pwm3 0 10000 0>;
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+
+		button@1 {
+			debounce-interval = <50>;
+			gpios = <&gpio4 RK_PB3 GPIO_ACTIVE_LOW>;
+			label = "user";
+			linux,code = <KEY_RESTART>;
+		};
+	};
+
+	gpio-leds {
+		compatible = "gpio-leds";
+		pinctrl-names = "led-green-sys", "led-green-wan", "led-green-lan";
+		pinctrl-0 = <&led_green_sys_pin>, <&led_green_wan_pin>, <&led_green_lan_pin>;
+
+		led_green_sys: led-green-sys {
+			gpios = <&gpio3 RK_PC4 GPIO_ACTIVE_HIGH>;
+			label = "green:sys";
+			linux,default-trigger = "heartbeat";
+		};
+
+		led_green_wan: led-green-wan {
+			gpios = <&gpio4 RK_PB4 GPIO_ACTIVE_LOW>;
+			label = "green:wan";
+		};
+
+		led_green_lan: led-green-lan {
+			gpios = <&gpio4 RK_PB2 GPIO_ACTIVE_LOW>;
+			label = "green:lan";
+		};
+	};
+
+	hdmi0_sound: hdmi0-sound {
+		status = "okay";
+		compatible = "rockchip,hdmi";
+		rockchip,mclk-fs = <128>;
+		rockchip,card-name = "rockchip-hdmi0";
+		rockchip,cpu = <&i2s5_8ch>;
+		rockchip,codec = <&hdmi0>;
+		rockchip,jack-det;
 	};
 
 	vcc5v0_sys: vcc5v0-sys {
@@ -65,16 +114,6 @@
 		vin-supply = <&vcc5v0_sys>;
 	};
 
-	hdmi0_sound: hdmi0-sound {
-		status = "okay";
-		compatible = "rockchip,hdmi";
-		rockchip,mclk-fs = <128>;
-		rockchip,card-name = "rockchip-hdmi0";
-		rockchip,cpu = <&i2s5_8ch>;
-		rockchip,codec = <&hdmi0>;
-		rockchip,jack-det;
-	};
-
 	vcc5v0_otg: vcc5v0-otg-regulator {
 		compatible = "regulator-fixed";
 		regulator-name = "vcc5v0_otg";
@@ -85,25 +124,6 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&vcc5v0_otg_en>;
 		vin-supply = <&vcc5v0_sys>;
-	};
-
-	gpio-leds {
-		compatible = "gpio-leds";
-
-		sys-led {
-			gpios = <&gpio3 RK_PC4 GPIO_ACTIVE_HIGH>;
-			linux,default-trigger = "heartbeat";
-		};
-
-		wan-led {
-			gpios = <&gpio4 RK_PB4 GPIO_ACTIVE_LOW>;
-			linux,default-trigger = "netdev";
-		};
-
-		lan-led {
-			gpios = <&gpio4 RK_PB2 GPIO_ACTIVE_LOW>;
-			linux,default-trigger = "netdev";
-		};
 	};
 };
 
@@ -182,21 +202,9 @@
 	mem-supply = <&vdd_cpu_big0_mem_s0>;
 };
 
-&cpu_b1 {
-	cpu-supply = <&vdd_cpu_big0_s0>;
-	mem-supply = <&vdd_cpu_big0_mem_s0>;
-	#cooling-cells = <2>;
-};
-
 &cpu_b2 {
 	cpu-supply = <&vdd_cpu_big1_s0>;
 	mem-supply = <&vdd_cpu_big1_mem_s0>;
-};
-
-&cpu_b3 {
-	cpu-supply = <&vdd_cpu_big1_s0>;
-	mem-supply = <&vdd_cpu_big1_mem_s0>;
-	#cooling-cells = <2>;
 };
 
 /* GPU */
@@ -353,10 +361,6 @@
 	status = "okay";
 };
 
-&avsd {
-	status = "okay";
-};
-
 &saradc {
 	status = "okay";
 	vref-supply = <&avcc_1v8_s0>;
@@ -432,10 +436,6 @@
 };
 
 &vdpu_mmu {
-	status = "okay";
-};
-
-&vepu {
 	status = "okay";
 };
 
@@ -517,23 +517,76 @@
 };
 
 /* PCIe */
+&combphy2_psu {
+	status = "okay";
+};
+
+/* rtl8125b eth0 */
+&pcie2x1l1 {
+	status = "okay";
+	reset-gpios = <&gpio4 RK_PA2 GPIO_ACTIVE_HIGH>;
+
+	pcie@0,0 {
+		reg = <0x00300000 0 0 0 0>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		rtl8125_1: pcie-eth@0,0 {
+			compatible = "pci10ec,8125";
+			label = "eth0";
+			reg = <0x000000 0 0 0 0>;
+
+			/* G+: LED0
+			 * G-: LED1
+			 * Y+: 3v3
+			 * Y-: LED2
+			 */
+			// LED0: active high, link on all speed
+			r8125,led0 = <0x102b>;
+
+			// LED1: active low, act on all speed
+			r8125,led1 = <0x0200>;
+
+			// LED2: active low, link on 100 + 1000 + 2500
+			r8125,led2 = <0x002a>;
+		};
+	};
+};
 
 &combphy0_ps {
 	status = "okay";
 };
 
+/* rtl8125b eth1 */
 &pcie2x1l2 {
 	status = "okay";
 	reset-gpios = <&gpio3 RK_PD1 GPIO_ACTIVE_HIGH>;
-};
 
-&combphy2_psu {
-	status = "okay";
-};
+	pcie@0,0 {
+		reg = <0x00400000 0 0 0 0>;
+		#address-cells = <3>;
+		#size-cells = <2>;
 
-&pcie2x1l1 {
-	status = "okay";
-	reset-gpios = <&gpio4 RK_PA2 GPIO_ACTIVE_HIGH>;
+		rtl8125_2: pcie-eth@0,0 {
+			compatible = "pci10ec,8125";
+			label = "eth1";
+			reg = <0x000000 0 0 0 0>;
+
+			/* G+: LED0
+			 * G-: LED1
+			 * Y+: 3v3
+			 * Y-: LED2
+			 */
+			// LED0: active high, link on all speed
+			r8125,led0 = <0x102b>;
+
+			// LED1: active low, act on all speed
+			r8125,led1 = <0x0200>;
+
+			// LED2: active low, link on 100 + 1000 + 2500
+			r8125,led2 = <0x002a>;
+		};
+	};
 };
 
 &pwm3 {
@@ -643,21 +696,35 @@
 };
 
 &pinctrl {
+	leds {
+		led_green_sys_pin: led-green-sys-pin {
+			rockchip,pins = <3 RK_PC4 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		led_green_wan_pin: led-green-wan-pin {
+			rockchip,pins = <4 RK_PB4 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		led_green_lan_pin: led-green-lan-pin {
+			rockchip,pins = <4 RK_PB2 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
 	power {
 		vcc_5v0_en: vcc-5v0-en {
 			rockchip,pins = <4 RK_PA3 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 
-	usb {
-		vcc5v0_otg_en: vcc5v0-otg-en {
-			rockchip,pins = <0 RK_PD4 RK_FUNC_GPIO &pcfg_pull_none>;
+	rtc {
+		hym8563_int: hym8563-int {
+			rockchip,pins = <0 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 
-	hym8563 {
-		hym8563_int: hym8563-int {
-			rockchip,pins = <0 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
+	usb {
+		vcc5v0_otg_en: vcc5v0-otg-en {
+			rockchip,pins = <0 RK_PD4 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 };
