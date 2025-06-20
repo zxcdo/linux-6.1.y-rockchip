@@ -16,6 +16,8 @@
 #include <dt-bindings/sensor-dev.h>
 #include "rk3566.dtsi"
 
+#include "rk3566-taishanpi-dsi-v10.dtsi"
+
 / {
 	model = "TaishanPi V10 Board";
 	compatible = "lckfb,tspi-v10", "rockchip,rk3566";
