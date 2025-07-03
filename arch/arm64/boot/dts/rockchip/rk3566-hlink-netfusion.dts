@@ -737,15 +737,15 @@
 		pinctrl-0 = <&rk628_int_h>;
 		//pinctrl-0 = <&rk628_int_h &rk628_enable_h &rk628_reset_l &rk628_det_l>;
 
-		//continues-clk = <1>;
-		//scaler-en = <1>;
+		continues-clk = <1>;
+		scaler-en = <1>;
 
 		power-domains = <&power RK3568_PD_VI>;
 
 		rockchip,camera-module-index = <0>;
 		rockchip,camera-module-facing = "back";
 		rockchip,camera-module-name = "RK628-CSI";
-		rockchip,camera-module-lens-name = "NC";
+		rockchip,camera-module-lens-name = "HDMI";
 
 		port {
 			rk628_out: endpoint {
@@ -1013,6 +1013,7 @@
 
 &rkcif_mipi_lvds {
 	status = "okay";
+	rockchip,cif-monitor;
 
 	port {
 		cif_mipi_in: endpoint {
