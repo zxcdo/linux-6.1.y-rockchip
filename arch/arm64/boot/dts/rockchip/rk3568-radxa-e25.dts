@@ -13,6 +13,11 @@
 	model = "Radxa E25";
 	compatible = "radxa,e25", "rockchip,rk3568";
 
+	aliases {
+		mmc0 = &sdmmc0;
+		mmc1 = &sdhci;
+	};
+
 	vcc5v0_otg: vcc5v0-otg-regulator {
 		compatible = "regulator-fixed";
 		regulator-always-on;
@@ -79,29 +84,36 @@
 		status = "okay";
 	};
 
-	rgb0: rgb0 {
-		compatible = "pwm-leds";
-		status = "okay";
-
-		rgb0-red {
-			pwms = <&pwm1 0 1000000 0>;
-			max-brightness = <255>;
+	gpio_leds: gpio-leds {
+		led_surround_red: led-surround-red {
+			gpios = <&gpio0 RK_PC0 GPIO_ACTIVE_HIGH>;
+			label = "surround:red";
+			pinctrl-0 = <&led_surround_red_en>;
+			pinctrl-names = "led_surround_red";
 		};
 
-		rgb0-blue {
-			pwms = <&pwm12 0 1000000 0>;
-			max-brightness = <255>;
+		led_surround_green: led-surround-green {
+			gpios = <&gpio0 RK_PC1 GPIO_ACTIVE_HIGH>;
+			label = "surround:green";
+			linux,default-trigger = "default-on";
+			default-state = "on";
+			pinctrl-0 = <&led_surround_green_en>;
+			pinctrl-names = "led_surround_green";
 		};
 
-		rgb0-green {
-			pwms = <&pwm2 0 1000000 0>;
-			max-brightness = <255>;
+		led_surround_blue: led-surround-blue {
+			gpios = <&gpio4 RK_PC5 GPIO_ACTIVE_HIGH>;
+			label = "surround:blue";
+			linux,default-trigger = "default-on";
+			pinctrl-0 = <&led_surround_blue_en>;
+			pinctrl-names = "led_surround_blue";
 		};
 	};
 };
 
 &fiq_debugger {
 	rockchip,baudrate = <115200>;
+	status = "okay";
 };
 
 &sdio_pwrseq {
@@ -122,11 +134,13 @@
 
 //sdcard
 &sdmmc0 {
+	max-frequency = <150000000>;
+	supports-sd;
 	bus-width = <4>;
 	cap-mmc-highspeed;
 	cap-sd-highspeed;
 	disable-wp;
-	sd-uhs-sdr50;
+	sd-uhs-sdr104;
 	vmmc-supply = <&vcc3v3_sd>;
 	vqmmc-supply = <&vccio_sd>;
 	pinctrl-names = "default";
@@ -246,39 +260,93 @@
 	status = "okay";
 };
 
+/* rtl8125b eth0 */
 &pcie3x2 {
 	rockchip,bifurcation;
 	reset-gpios = <&gpio2 RK_PD6 GPIO_ACTIVE_HIGH>;
 	vpcie3v3-supply = <&pcie30_3v3>;
 	pinctrl-0 = <&pcie30x2m1_pins>; 
 	status = "okay";
+
+	pcie@0,0 {
+		reg = <0x00200000 0 0 0 0>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		rtl8125_1: pcie-eth@20,0 {
+			compatible = "pci10ec,8125";
+			label = "eth0";
+			reg = <0x000000 0 0 0 0>;
+
+			/* G+: LED0
+			 * G-: LED1
+			 * Y+: 3v3
+			 * Y-: LED2
+			 */
+			// LED0: active high, link on all speed
+			r8125,led0 = <0x102b>;
+
+			// LED1: active low, act on all speed
+			r8125,led1 = <0x0200>;
+
+			// LED2: active low, link on 100 + 1000 + 2500
+			r8125,led2 = <0x002a>;
+		};
+	};
 };
 
 &combphy2_psq {
 	status = "okay";
 };
 
+/* rtl8125b eth1 */
 &pcie2x1 {
 	reset-gpios = <&gpio1 RK_PB2 GPIO_ACTIVE_HIGH>;
 	vpcie3v3-supply = <&pcie30_3v3>;
 	pinctrl-0 = <&pcie20m2_pins>; 
 	status = "okay";
+
+	pcie@0 {
+		reg = <0x00000000 0 0 0 0>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		rtl8125_2: pcie-eth@0,0 {
+			compatible = "pci10ec,8125";
+			label = "eth1";
+			reg = <0x000000 0 0 0 0>;
+
+			/* G+: LED0
+			 * G-: LED1
+			 * Y+: 3v3
+			 * Y-: LED2
+			 */
+			// LED0: active high, link on all speed
+			r8125,led0 = <0x102b>;
+
+			// LED1: active low, act on all speed
+			r8125,led1 = <0x0200>;
+
+			// LED2: active low, link on 100 + 1000 + 2500
+			r8125,led2 = <0x002a>;
+		};
+	};
 };
 
 &pwm1 {
-	status = "okay";
+	status = "disabled";
 	pinctrl-names = "active";
 	pinctrl-0 = <&pwm1m0_pins>;
 };
 
 &pwm2 {
-	status = "okay";
+	status = "disabled";
 	pinctrl-names = "active";
 	pinctrl-0 = <&pwm2m0_pins>;
 };
 
 &pwm12 {
-	status = "okay";
+	status = "disabled";
 	pinctrl-names = "active";
 	pinctrl-0 = <&pwm12m1_pins>;
 };
@@ -322,4 +390,133 @@
 			rockchip,pins = <0 RK_PD5 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
+
+	leds {
+		led_surround_red_en: led-surround-red-en {
+			rockchip,pins = <0 RK_PC0 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		led_surround_green_en: led-surround-green-en {
+			rockchip,pins = <0 RK_PC1 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		led_surround_blue_en: led-surround-blue-en {
+			rockchip,pins = <4 RK_PC5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+};
+
+&gpio0 {
+	gpio-line-names =
+		/* GPIO0_A0-A3 */
+		"", "", "", "",
+		/* GPIO0_A4-A7 */
+		"", "", "", "",
+
+		/* GPIO0_B0-B3 */
+		"", "", "", "",
+		/* GPIO0_B4-B7 */
+		"", "", "", "",
+
+		/* GPIO0_C0-C3 */
+		"", "", "", "",
+		/* GPIO0_C4-C7 */
+		"", "", "PIN_18", "",
+
+		/* GPIO0_D0-D3 */
+		"", "", "", "",
+		/* GPIO0_D4-D7 */
+		"", "", "", "";
+};
+
+&gpio1 {
+	gpio-line-names =
+		/* GPIO1_A0-A3 */
+		"PIN_3", "PIN_5", "", "",
+		/* GPIO1_A4-A7 */
+		"", "", "", "",
+
+		/* GPIO1_B0-B3 */
+		"", "", "", "",
+		/* GPIO1_B4-B7 */
+		"", "", "", "",
+
+		/* GPIO1_C0-C3 */
+		"", "", "", "",
+		/* GPIO1_C4-C7 */
+		"", "", "", "",
+
+		/* GPIO1_D0-D3 */
+		"", "", "", "",
+		/* GPIO1_D4-D7 */
+		"", "", "", "";
+};
+
+&gpio2 {
+	gpio-line-names =
+		/* GPIO2_A0-A3 */
+		"", "", "", "",
+		/* GPIO2_A4-A7 */
+		"", "", "", "",
+
+		/* GPIO2_B0-B3 */
+		"", "", "", "",
+		/* GPIO2_B4-B7 */
+		"", "", "", "",
+
+		/* GPIO2_C0-C3 */
+		"", "", "", "",
+		/* GPIO2_C4-C7 */
+		"", "", "", "",
+
+		/* GPIO2_D0-D3 */
+		"PIN_21", "PIN_19", "PIN_16", "PIN_23",
+		/* GPIO2_D4-D7 */
+		"", "", "", "";
+};
+
+&gpio3 {
+	gpio-line-names =
+		/* GPIO3_A0-A3 */
+		"", "PIN_17", "", "PIN_12",
+		/* GPIO3_A4-A7 */
+		"", "", "", "",
+
+		/* GPIO3_B0-B3 */
+		"", "", "", "",
+		/* GPIO3_B4-B7 */
+		"", "", "", "PIN_7",
+
+		/* GPIO3_C0-C3 */
+		"PIN_26", "PIN_15", "PIN_8", "PIN_10",
+		/* GPIO3_C4-C7 */
+		"PIN_11", "PIN_13", "", "",
+
+		/* GPIO3_D0-D3 */
+		"", "", "", "",
+		/* GPIO3_D4-D7 */
+		"", "", "", "";
+};
+
+&gpio4 {
+	gpio-line-names =
+		/* GPIO4_A0-A3 */
+		"", "", "", "",
+		/* GPIO4_A4-A7 */
+		"", "", "", "",
+
+		/* GPIO4_B0-B3 */
+		"", "", "", "",
+		/* GPIO4_B4-B7 */
+		"", "", "", "",
+
+		/* GPIO4_C0-C3 */
+		"", "", "", "",
+		/* GPIO4_C4-C7 */
+		"", "", "PIN_24", "",
+
+		/* GPIO4_D0-D3 */
+		"", "", "", "",
+		/* GPIO4_D4-D7 */
+		"", "", "", "";
 };
