@@ -274,6 +274,7 @@
 };
 
 &usbdrd_dwc3 {
+	dr_mode = "otg";
+	extcon = <&usb2phy>;
 	status = "okay";
-	dr_mode = "host";
 };
