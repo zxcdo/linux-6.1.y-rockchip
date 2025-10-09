@@ -1,0 +1,169 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+// Copyright (c) 2022 AmadeusGhost <amadeus@jmu.edu.cn>
+// Copyright (c) 2022 Flippy <flippy@sina.com>
+
+/dts-v1/;
+
+#include "rk3568-hlink-h66k.dts"
+
+/ {
+	model = "Hlink HT3";
+	compatible = "hlink,ht3", "hlink,hnas", "rockchip,rk3568";
+
+	aliases {
+		rtc0 = &hym8563;
+	};
+
+	sata_pm_power: sata-pm-power {
+		compatible = "regulator-fixed";
+		regulator-name = "sata_pm_power";
+		regulator-enable-ramp-delay = <1000000>;
+		regulator-always-on;
+		regulator-boot-on;
+
+		enable-active-high;
+		gpio = <&gpio4 RK_PB0 GPIO_ACTIVE_HIGH>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&sata_pm_power_en>;
+		vin-supply = <&vcc3v3_sys>;
+	};
+
+	sata_pm_reset: sata-pm-reset {
+		compatible = "regulator-fixed";
+		regulator-name = "sata_pm_reset";
+		regulator-enable-ramp-delay = <1000000>;
+		regulator-always-on;
+		regulator-boot-on;
+
+		enable-active-high;
+		gpio = <&gpio4 RK_PA7 GPIO_ACTIVE_HIGH>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&sata_pm_reset_en>;
+		vin-supply = <&vcc3v3_sys>;
+	};
+
+	sata_hdd_power: sata-hdd-power {
+		compatible = "regulator-fixed";
+		regulator-name = "sata_hdd_power";
+		regulator-enable-ramp-delay = <1000000>;
+		regulator-always-on;
+		regulator-boot-on;
+
+		enable-active-high;
+		gpio = <&gpio0 RK_PC5 GPIO_ACTIVE_HIGH>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&sata_hdd_power_en>;
+		vin-supply = <&vcc5v0_sys>;
+	};
+};
+
+&i2c0 {
+	eeprom: eeprom@50 {
+		compatible = "atmel,24c02";
+		reg = <0x50>;
+		address-width = <8>;
+		pagesize = <8>;
+		size = <256>;
+	};
+
+	hym8563: hym8563@51 {
+		compatible = "haoyu,hym8563";
+		reg = <0x51>;
+		#clock-cells = <0>;
+		clock-frequency = <32768>;
+		clock-output-names = "hym8563";
+	};
+};
+
+&leds {
+	led_hdd1: led-hdd1 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&led_hdd1_pin>;
+		label = "led:hdd1";
+		gpios = <&gpio3 RK_PB6 GPIO_ACTIVE_HIGH>;
+	};
+
+	led_hdd2: led-hdd2 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&led_hdd2_pin>;
+		label = "led:hdd2";
+		gpios = <&gpio3 RK_PB5 GPIO_ACTIVE_HIGH>;
+	};
+
+	led_hdd3: led-hdd3 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&led_hdd3_pin>;
+		label = "led:hdd3";
+		gpios = <&gpio3 RK_PB2 GPIO_ACTIVE_HIGH>;
+	};
+
+	led_hdd4: led-hdd4 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&led_hdd4_pin>;
+		label = "led:hdd4";
+		gpios = <&gpio3 RK_PB1 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+&pinctrl {
+	leds {
+		led_hdd1_pin: led-hdd1-pin {
+			rockchip,pins = <3 RK_PB6 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		led_hdd2_pin: led-hdd2-pin {
+			rockchip,pins = <3 RK_PB5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		led_hdd3_pin: led-hdd3-pin {
+			rockchip,pins = <3 RK_PB2 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		led_hdd4_pin: led-hdd4-pin {
+			rockchip,pins = <3 RK_PB1 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	sata-pm {
+		sata_pm_power_en: sata-pm-power-en {
+			rockchip,pins = <4 RK_PB0 RK_FUNC_GPIO &pcfg_pull_down>;
+		};
+
+		sata_pm_reset_en: sata-pm-reset-en {
+			rockchip,pins = <4 RK_PA7 RK_FUNC_GPIO &pcfg_pull_down>;
+		};
+
+		sata_hdd_power_en: sata-hdd-power-en {
+			rockchip,pins = <0 RK_PC5 RK_FUNC_GPIO &pcfg_pull_down>;
+		};
+	};
+};
+
+&rtl8125_1 {
+	/*
+	 * G+ 3v3
+	 * G- LED3: ACT on all speed
+	 * Y+ 3v3
+	 * Y- LED2: LINK on 10 + 100 + 1000 + 2500
+	 */
+	r8125,led2 = <0x002b>;
+	r8125,led3 = <0x0200>;
+};
+
+&rtl8125_2 {
+	/*
+	 * G+ 3v3
+	 * G- LED3: ACT on all speed
+	 * Y+ 3v3
+	 * Y- LED2: LINK on 10 + 100 + 1000 + 2500
+	 */
+	r8125,led2 = <0x002b>;
+	r8125,led3 = <0x0200>;
+};
+
+&wdt {
+	status = "okay";
+};
