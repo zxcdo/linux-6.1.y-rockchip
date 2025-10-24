@@ -369,6 +369,11 @@
 	connect = <&vp1_out_dsi1>;
 };
 
+/*
+ * Disabled: Using LG AMOLED panel configuration from tspi-rk3566-dsi-lg-v10.dtsi instead
+ * This old configuration is for a different 800x1280 panel
+ */
+/*
 &dsi1 {
 	status = "okay";
 	rockchip,lane-rate = <500>;
@@ -648,6 +653,7 @@
 	};
 
 };
+*/
 
 &bus_npu {
 	bus-supply = <&vdd_logic>;
